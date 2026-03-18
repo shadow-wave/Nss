@@ -320,24 +320,32 @@
                     <i class="fa-solid fa-circle-info text-4xl"></i>
                 </div>
                 <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">Water Audit App</h2>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 3.0</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 4.0</p>
                 
                 <div class="space-y-4 text-left bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-8">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm shrink-0"><i class="fa-solid fa-code"></i></div>
                         <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Developer</p><p class="text-sm font-extrabold text-slate-800">Aravind o k</p></div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm shrink-0"><i class="fa-solid fa-phone"></i></div>
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Contact</p><p class="text-sm font-extrabold text-slate-800">6238291791</p></div>
-                    </div>
+                    <a href="tel:6238291791" class="flex items-center gap-4 group cursor-pointer">
+                        <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-500 shadow-sm shrink-0 group-hover:bg-blue-50 transition-colors"><i class="fa-solid fa-phone"></i></div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Contact</p>
+                            <p class="text-sm font-extrabold text-blue-600 group-hover:underline">6238291791</p>
+                        </div>
+                    </a>
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm shrink-0"><i class="fa-solid fa-building-columns"></i></div>
                         <div><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Institution</p><p class="text-sm font-extrabold text-slate-800">MG College Iritty</p><p class="text-[10px] font-bold text-slate-500">NSS Units 63 & 30</p></div>
                     </div>
                 </div>
                 
-                <p class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.1em] leading-relaxed">Designed for the Jal Mahotsav 2026 Initiative. Every drop counts.</p>
+                <p class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.1em] leading-relaxed mb-6">Designed for the Jal Mahotsav 2026 Initiative. Every drop counts.</p>
+
+                <!-- Admin Access Toggle -->
+                <button onclick="toggleAdminMode()" class="w-full py-3 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-shield-halved"></i> <span id="admin-btn-text">Enable Admin Mode</span>
+                </button>
             </div>
         </div>
 
@@ -397,7 +405,7 @@
     <script type="module">
         import { initializeApp } from "firebase/app";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc } from "firebase/firestore";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCIrJGojkToHC54SVIC4k5qmEJyzbrvJ1w",
@@ -416,6 +424,8 @@
 
         let currentUser = null;
         let surveys = [];
+        let isAdmin = false; // Global admin state
+        let editModeId = null; // Track if we are editing an existing survey
 
         // Haptic Feedback Helper
         const triggerHaptic = () => { if (window.navigator.vibrate) window.navigator.vibrate(10); };
@@ -517,9 +527,34 @@
                     loader.classList.add('opacity-0');
                     setTimeout(() => loader.classList.add('hidden'), 700);
                 }
-                renderDashboard();
+                // Only re-render dashboard if we are not currently editing a form to prevent losing data
+                if(!editModeId) {
+                    renderDashboard();
+                }
             });
         }
+
+        // Admin Toggle
+        window.toggleAdminMode = () => {
+            triggerHaptic();
+            if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('admin-btn-text').innerText = "Enable Admin Mode";
+                window.showAlert("Admin mode disabled. You can no longer edit or delete records.", "Admin Mode", "info");
+                renderDashboard();
+            } else {
+                // Simple PIN protection for admin mode
+                const pin = prompt("Enter Admin PIN:");
+                if (pin === "6330") { // Using NSS Unit numbers as default PIN
+                    isAdmin = true;
+                    document.getElementById('admin-btn-text').innerText = "Disable Admin Mode";
+                    window.showAlert("Admin mode enabled. You can now edit and delete records.", "Admin Mode", "success");
+                    renderDashboard();
+                } else if (pin !== null) {
+                    window.showAlert("Incorrect PIN.", "Access Denied", "error");
+                }
+            }
+        };
 
         function renderDashboard() {
             const searchInput = document.getElementById('search-input');
@@ -621,21 +656,80 @@
             const listEl = document.getElementById('audit-list');
             if(listEl) {
                 listEl.innerHTML = filtered.map(s => `
-                    <div class="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform cursor-pointer" onclick="showAuditDetail('${s.id}')">
-                        <div class="w-12 h-12 rounded-[16px] bg-slate-50 flex items-center justify-center text-slate-400 font-black text-[10px] border border-slate-100 uppercase tracking-widest flex-shrink-0">
+                    <div class="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex items-center gap-4 transition-transform ${isAdmin ? '' : 'active:scale-[0.98] cursor-pointer'}" ${isAdmin ? '' : `onclick="showAuditDetail('${s.id}')"`}>
+                        <div class="w-12 h-12 rounded-[16px] bg-slate-50 flex items-center justify-center text-slate-400 font-black text-[10px] border border-slate-100 uppercase tracking-widest flex-shrink-0 cursor-pointer" onclick="showAuditDetail('${s.id}')">
                             W${s.wardNo}
                         </div>
-                        <div class="flex-grow min-w-0">
+                        <div class="flex-grow min-w-0 cursor-pointer" onclick="showAuditDetail('${s.id}')">
                             <h5 class="font-extrabold text-[13px] text-slate-800 truncate leading-tight">${s.headName || 'No Name'}</h5>
                             <p class="text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] mt-1 truncate">ID: ${s.houseNo}</p>
                         </div>
-                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </div>
+                        ${isAdmin ? `
+                            <div class="flex items-center gap-2">
+                                <button onclick="editSurveyFn('${s.id}')" class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100 transition shadow-sm">
+                                    <i class="fa-solid fa-pen text-[10px]"></i>
+                                </button>
+                                <button onclick="deleteSurveyFn('${s.id}')" class="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 hover:bg-rose-100 transition shadow-sm">
+                                    <i class="fa-solid fa-trash text-[10px]"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 cursor-pointer" onclick="showAuditDetail('${s.id}')">
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </div>
+                        `}
                     </div>
                 `).join('');
             }
         }
+
+        // Admin Edit & Delete Functions
+        window.deleteSurveyFn = (id) => {
+            triggerHaptic();
+            window.showConfirm("Are you sure you want to permanently delete this audit record?", async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'surveys', id));
+                    // Re-render handled by onSnapshot
+                } catch (error) {
+                    console.error(error);
+                    window.showAlert("Failed to delete record.", "Error", "error");
+                }
+            }, "Delete Record");
+        };
+
+        window.editSurveyFn = (id) => {
+            triggerHaptic();
+            const survey = surveys.find(s => s.id === id);
+            if(!survey) return;
+
+            editModeId = id;
+            switchTab('form');
+            
+            // Populate form
+            const form = document.getElementById('auditForm');
+            Object.keys(survey).forEach(key => {
+                const elements = form.elements[key];
+                if (!elements) return;
+
+                if (elements.type === 'radio' || (elements.length && elements[0].type === 'radio')) {
+                    const radios = elements.length ? elements : [elements];
+                    for(let r of radios) {
+                        if(r.value === survey[key]) {
+                            r.checked = true;
+                            // Trigger change to handle conditionals
+                            r.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                } else {
+                    elements.value = survey[key];
+                }
+            });
+
+            // Update submit button text
+            const btn = form.querySelector('button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Update Audit Record';
+            window.showAlert("Editing record. Make changes and submit to update.", "Edit Mode", "info");
+        };
 
         // Form Submission Logic
         document.getElementById('auditForm').onsubmit = async (e) => {
@@ -648,7 +742,6 @@
             }
 
             const data = Object.fromEntries(new FormData(e.target).entries());
-            data.createdAt = serverTimestamp();
             data.submittedBy = currentUser ? currentUser.uid : 'anon';
 
             // Clean data logic (if conditional wasn't met, delete data)
@@ -658,20 +751,30 @@
             if(data.q24 !== 'Yes') delete data.q25;
 
             const successScreen = document.getElementById('success-screen');
-            if(successScreen) successScreen.classList.remove('hidden');
+            if(successScreen) {
+                successScreen.querySelector('h2').innerText = editModeId ? "Audit Updated" : "Audit Synced";
+                successScreen.classList.remove('hidden');
+            }
 
             try {
-                const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'surveys'), data);
+                let docId = editModeId;
+                if(editModeId) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'surveys', editModeId), data);
+                } else {
+                    data.createdAt = serverTimestamp();
+                    const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'surveys'), data);
+                    docId = docRef.id;
+                }
+                
                 setTimeout(() => {
                     if(successScreen) successScreen.classList.add('hidden');
-                    e.target.reset();
-                    document.querySelectorAll('.radio-tile-group input:checked').forEach(i => i.checked = false);
-                    document.querySelectorAll('[data-parent]').forEach(el => el.classList.add('hidden'));
-                    showAuditDetail(docRef.id, data);
+                    window.resetFormInternal();
+                    showAuditDetail(docId, data);
+                    editModeId = null; // clear edit mode
                 }, 1500);
             } catch(err) { 
                 window.showAlert("Submission failed. Check database rules.", "Error", "error"); 
-                successScreen.classList.add('hidden');
+                if(successScreen) successScreen.classList.add('hidden');
             }
         };
 
@@ -1007,12 +1110,21 @@ _Generated via MG College NSS Water Audit System_`.trim();
             window.showAlert("Raw database export complete.", "JSON Exported", "success");
         };
 
+        window.resetFormInternal = () => {
+            document.getElementById('auditForm').reset();
+            document.querySelectorAll('.radio-tile-group input:checked').forEach(i => i.checked = false);
+            document.querySelectorAll('[data-parent]').forEach(el => el.classList.add('hidden'));
+            
+            // Reset button text
+            const btn = document.querySelector('#auditForm button[type="submit"]');
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Push to Server';
+            editModeId = null;
+        }
+
         window.resetForm = () => { 
             triggerHaptic();
             window.showConfirm("Are you sure you want to clear this audit session? All entered data will be lost.", () => {
-                document.getElementById('auditForm').reset();
-                document.querySelectorAll('.radio-tile-group input:checked').forEach(i => i.checked = false);
-                document.querySelectorAll('[data-parent]').forEach(el => el.classList.add('hidden'));
+                window.resetFormInternal();
             }, "Clear Workspace");
         };
 
