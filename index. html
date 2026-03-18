@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="nss_logo.png">
+    <title>NSS Water Audit | MG College</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        :root {
+            --brand-blue: #2563eb;
+            --safe-area-top: env(safe-area-inset-top, 0px);
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            background-color: #f8fafc;
+            overscroll-behavior-y: contain;
+            user-select: none;
+        }
+
+        /* Mobile Viewport Fixes */
+        .app-height { height: 100vh; height: -webkit-fill-available; }
+        .safe-pt { padding-top: calc(var(--safe-area-top) + 12px); }
+        .safe-pb { padding-bottom: calc(var(--safe-area-bottom) + 85px); }
+
+        /* Navigation Styling */
+        .nav-blur {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .nav-active { color: var(--brand-blue) !important; }
+        .nav-active i { transform: translateY(-4px); color: var(--brand-blue); }
+
+        /* Card & Tile Effects */
+        .tile-active {
+            border-color: var(--brand-blue) !important;
+            background-color: #eff6ff !important;
+            transform: scale(0.98);
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-view { animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
+
+        /* Hide scrollbars but allow scrolling */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Printing Adjustments */
+        @media print {
+            .print-hidden { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .report-card { border: none !important; box-shadow: none !important; }
+        }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+            }
+        }
+    </script>
+</head>
+<body class="flex flex-col text-slate-900 overflow-hidden">
+
+    <!-- Mobile Top Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-slate-100 safe-pt print-hidden">
+        <div class="px-5 py-3 flex items-center justify-between max-w-xl mx-auto">
+            <div class="flex items-center gap-3">
+                <img id="nss-logo-img" src="nss_logo.png" onerror="this.src='https://via.placeholder.com/40?text=NSS'" class="w-9 h-9 rounded-xl shadow-sm bg-white p-1">
+                <div>
+                    <h1 class="text-xs font-black tracking-widest text-slate-800 leading-none uppercase">Water Audit</h1>
+                    <p class="text-[9px] font-bold text-blue-600 mt-1 uppercase">MG College • Units 63 & 30</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div id="online-indicator" class="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full text-[9px] font-black border border-emerald-100">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> LIVE
+                </div>
+                <img id="college-logo-img" src="college_logo.png" onerror="this.src='https://via.placeholder.com/40?text=MGC'" class="w-9 h-9 rounded-xl shadow-sm bg-white p-1">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Content -->
+    <main class="flex-grow overflow-y-auto no-scrollbar safe-pb pt-20">
+        
+        <!-- App Initial Loader -->
+        <div id="loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center p-10 transition-opacity duration-500">
+            <div class="relative w-16 h-16 mb-6">
+                <div class="absolute inset-0 border-4 border-blue-50 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] animate-pulse">Establishing Secure Sync</p>
+        </div>
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard" class="hidden px-5 py-6 space-y-6 max-w-xl mx-auto animate-view">
+            
+            <!-- Quick Summary Card -->
+            <div class="bg-blue-600 rounded-[32px] p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden">
+                <i class="fa-solid fa-droplet absolute -right-6 -bottom-6 text-white/10 text-9xl"></i>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start mb-10">
+                        <div>
+                            <p class="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-1">Total Impact</p>
+                            <h2 id="stat-total" class="text-4xl font-black tracking-tighter">0</h2>
+                        </div>
+                        <button onclick="copyReportSummary()" class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center active:scale-90 transition">
+                            <i class="fa-solid fa-file-contract"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="bg-white/10 p-3 rounded-2xl text-center">
+                            <p id="stat-members" class="text-lg font-black leading-none">0</p>
+                            <p class="text-[8px] font-bold uppercase opacity-60 mt-1.5">Citizens</p>
+                        </div>
+                        <div class="bg-white/10 p-3 rounded-2xl text-center border border-white/5">
+                            <p id="stat-pledges" class="text-lg font-black text-emerald-300 leading-none">0</p>
+                            <p class="text-[8px] font-bold uppercase opacity-60 mt-1.5">Pledges</p>
+                        </div>
+                        <div class="bg-white/10 p-3 rounded-2xl text-center">
+                            <p id="stat-leaks" class="text-lg font-black text-rose-300 leading-none">0</p>
+                            <p class="text-[8px] font-bold uppercase opacity-60 mt-1.5">Leaks</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insight Section -->
+            <div class="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-blue-500"></i> Efficiency Insights
+                </h3>
+                <div id="risk-bars" class="space-y-6">
+                    <!-- JS Populated -->
+                </div>
+                <div id="source-bars" class="mt-8 pt-8 border-t border-slate-50 space-y-6">
+                    <!-- JS Populated -->
+                </div>
+            </div>
+
+            <!-- Audit List Search -->
+            <div class="space-y-4 pb-10">
+                <div class="relative group">
+                    <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
+                    <input type="text" id="search-input" oninput="renderDashboard()" placeholder="Search Name or House No..." class="w-full pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-[24px] text-sm focus:ring-4 focus:ring-blue-500/5 outline-none shadow-sm transition-all">
+                </div>
+                
+                <div id="audit-list" class="space-y-3">
+                    <!-- JS Populated Cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- FORM VIEW -->
+        <div id="view-form" class="hidden px-5 py-6 space-y-8 max-w-xl mx-auto animate-view">
+            
+            <!-- Success Overlay -->
+            <div id="success-screen" class="hidden fixed inset-0 bg-blue-600/98 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center text-white p-10">
+                <div class="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                    <i class="fa-solid fa-check text-4xl"></i>
+                </div>
+                <h2 class="text-3xl font-black mb-2 uppercase tracking-tighter text-center">Audit Verified</h2>
+                <p class="text-blue-100 text-center text-sm font-medium opacity-80 leading-relaxed">Household information has been synchronized with college archives.</p>
+                <div class="mt-12 w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <div class="h-full bg-white animate-[loading_1.5s_infinite]"></div>
+                </div>
+            </div>
+
+            <form id="auditForm" class="space-y-8">
+                <!-- Identity Card -->
+                <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 space-y-5">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                            <i class="fa-solid fa-id-card-clip text-sm"></i>
+                        </div>
+                        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Audit Context</h4>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="text" name="volunteerName" required placeholder="Volunteer Full Name" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" name="wardNo" required inputmode="numeric" placeholder="Ward #" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition">
+                            <input type="text" name="houseNo" required placeholder="House ID/No." class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition">
+                        </div>
+                        <input type="text" name="headName" required placeholder="Name of Head of Household" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition font-bold">
+                        <input type="number" name="membersCount" required inputmode="numeric" placeholder="Total Members in House" class="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Dynamic Question Sections -->
+                <div id="dynamic-questions" class="space-y-8"></div>
+
+                <!-- Pledge Button -->
+                <div class="bg-emerald-50 p-8 rounded-[40px] border-2 border-emerald-100 text-center shadow-lg shadow-emerald-50">
+                    <div class="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-200">
+                        <i class="fa-solid fa-leaf"></i>
+                    </div>
+                    <p class="text-emerald-900 font-extrabold text-sm mb-8 leading-tight tracking-tight px-4 text-center">ജലസംരക്ഷണത്തിനായി ഇന്ന് 'ജല ശപഥം' എടുക്കാൻ തയ്യാറാണോ?</p>
+                    <div class="flex flex-col gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="pledge" value="Yes, Pledged!" class="hidden peer" required>
+                            <div class="py-4 rounded-2xl bg-white border-2 border-emerald-200 text-emerald-700 font-black text-xs peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-600 transition tracking-widest uppercase active:scale-95">✅ Yes, We Pledge</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="pledge" value="Maybe later" class="hidden peer" required>
+                            <div class="py-4 rounded-2xl bg-white border-2 border-slate-200 text-slate-400 font-black text-[10px] peer-checked:bg-slate-800 peer-checked:text-white peer-checked:border-slate-800 transition tracking-widest uppercase active:scale-95">Maybe Later</div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-4 px-2">
+                    <button type="submit" class="w-full bg-blue-600 text-white font-black py-5 rounded-[28px] shadow-2xl shadow-blue-300/50 hover:bg-blue-700 active:scale-95 transition-all text-base tracking-widest uppercase">
+                        Push Audit to Server
+                    </button>
+                    <button type="button" onclick="resetForm()" class="w-full text-slate-300 font-bold text-[9px] uppercase tracking-[0.4em] py-10">Clear Workspace</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- REPORT VIEW -->
+        <div id="view-report" class="hidden max-w-xl mx-auto p-5 animate-view print-p-0">
+            <div class="flex items-center justify-between mb-8 print-hidden">
+                <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 active:scale-90 transition">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button onclick="window.print()" class="bg-slate-900 text-white px-6 py-3.5 rounded-2xl text-[11px] font-black shadow-xl flex items-center gap-3 tracking-widest uppercase hover:bg-black transition-all active:scale-95">
+                    <i class="fa-solid fa-file-pdf"></i> Generate PDF
+                </button>
+            </div>
+            <div id="report-canvas" class="bg-white rounded-[40px] shadow-2xl overflow-hidden report-card"></div>
+        </div>
+    </main>
+
+    <!-- App Bottom Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 z-[70] nav-blur border-t border-slate-100 px-8 pt-3 pb-safe print-hidden">
+        <div class="max-w-md mx-auto flex items-center justify-around relative">
+            <button id="nav-btn-dashboard" onclick="switchTab('dashboard')" class="flex flex-col items-center py-2 px-6 text-slate-400 transition-all duration-300 relative group">
+                <i class="fa-solid fa-grid-2 text-xl mb-1.5 transition-transform group-active:scale-110"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">Insights</span>
+            </button>
+            
+            <button id="nav-btn-form" onclick="switchTab('form')" class="flex flex-col items-center py-2 px-6 text-slate-400 transition-all duration-300 relative group">
+                <i class="fa-solid fa-circle-plus text-xl mb-1.5 transition-transform group-active:scale-110"></i>
+                <span class="text-[9px] font-black uppercase tracking-tighter">New Audit</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Logic Engine -->
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, deleteDoc } from "firebase/firestore";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCIrJGojkToHC54SVIC4k5qmEJyzbrvJ1w",
+            authDomain: "nss-7a3b3.firebaseapp.com",
+            projectId: "nss-7a3b3",
+            storageBucket: "nss-7a3b3.firebasestorage.app",
+            messagingSenderId: "286386225024",
+            appId: "1:286386225024:web:5d8dd88a3971fcb270cb65",
+            measurementId: "G-TGXM9ZX377"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'nss-water-audit';
+
+        let currentUser = null;
+        let surveys = [];
+
+        // App Navigation Controller
+        window.switchTab = (tab) => {
+            document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
+            const target = tab === 'view' ? 'view-report' : `view-${tab}`;
+            const el = document.getElementById(target);
+            if(el) el.classList.remove('hidden');
+
+            // Nav States
+            const btns = { dashboard: document.getElementById('nav-btn-dashboard'), form: document.getElementById('nav-btn-form') };
+            Object.values(btns).forEach(b => { if(b) b.classList.remove('nav-active'); });
+            if(btns[tab]) btns[tab].classList.add('nav-active');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // Data Sync Initialization
+        async function startApp() {
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, user => { if(user) { currentUser = user; syncDatabase(); } });
+            } catch (e) { alert("Offline mode or sync error."); }
+        }
+
+        function syncDatabase() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'surveys'), (snap) => {
+                surveys = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                surveys.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                const loader = document.getElementById('loader');
+                if(loader) loader.classList.add('opacity-0', 'pointer-events-none');
+                renderDashboard();
+            });
+        }
+
+        function renderDashboard() {
+            const searchInput = document.getElementById('search-input');
+            const search = searchInput ? searchInput.value.toLowerCase() : '';
+            const filtered = surveys.filter(s => (s.headName || '').toLowerCase().includes(search) || (s.houseNo || '').toLowerCase().includes(search));
+
+            const stats = { total: surveys.length, members: 0, pledges: 0, leaks: 0, riskTank: 0, riskTap: 0, riskRO: 0 };
+            const sourceMap = { 'Piped Supply': 0, 'Well': 0, 'Tanker': 0 };
+
+            surveys.forEach(s => {
+                stats.members += parseInt(s.membersCount) || 0;
+                if(s.pledge?.includes('Yes')) stats.pledges++;
+                if(s.q17 === 'Yes' || s.q18 === 'Yes') stats.leaks++;
+                if(s.q5 === 'Yes' && s.q6 === 'No (Overflows)') stats.riskTank++;
+                if(s.q8 && s.q8 !== 'Never') stats.riskTap++;
+                if(s.q11 === 'Yes' && s.q12 === 'Wasted') stats.riskRO++;
+                if(sourceMap[s.q4] !== undefined) sourceMap[s.q4]++;
+            });
+
+            // Summary Texts - Safeguard against null elements
+            ['total', 'members', 'pledges', 'leaks'].forEach(k => {
+                const el = document.getElementById(`stat-${k}`);
+                if(el) el.innerText = stats[k];
+            });
+
+            // Progress Bars - Risks
+            const riskContainer = document.getElementById('risk-bars');
+            if(riskContainer) {
+                const risks = [
+                    { l: 'Tank Overflow Risk', v: stats.riskTank, c: 'bg-orange-500' },
+                    { l: 'Tap Efficiency Issues', v: stats.riskTap, c: 'bg-rose-500' },
+                    { l: 'RO Wastewater Loss', v: stats.riskRO, c: 'bg-amber-500' }
+                ];
+                riskContainer.innerHTML = risks.map(r => `
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-2"><span>${r.l}</span><span>${Math.round((r.v/(stats.total||1))*100)}%</span></div>
+                        <div class="w-full bg-slate-50 h-2.5 rounded-full overflow-hidden border border-slate-100">
+                            <div class="${r.c} h-full transition-all duration-1000" style="width: ${(r.v/(stats.total||1))*100}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Progress Bars - Sources
+            const sourceContainer = document.getElementById('source-bars');
+            if(sourceContainer) {
+                sourceContainer.innerHTML = Object.entries(sourceMap).map(([label, count]) => `
+                    <div>
+                        <div class="flex justify-between text-[11px] font-bold text-slate-700 mb-2"><span>${label}</span><span>${count} Homes</span></div>
+                        <div class="w-full bg-slate-50 h-2 rounded-full overflow-hidden border border-slate-100">
+                            <div class="bg-blue-600 h-full transition-all duration-1000" style="width: ${(count/(stats.total||1))*100}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // List Cards
+            const listEl = document.getElementById('audit-list');
+            if(listEl) {
+                listEl.innerHTML = filtered.map(s => `
+                    <div class="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-4 active:bg-blue-50 transition-all" onclick="showAuditDetail('${s.id}')">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-blue-600 font-black text-xs border border-slate-100">W${s.wardNo}</div>
+                        <div class="flex-grow">
+                            <h5 class="font-extrabold text-sm text-slate-800 leading-none">${s.headName}</h5>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">House ID: ${s.houseNo}</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-300 text-[10px]"></i>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Form Submission Logic
+        document.getElementById('auditForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            data.createdAt = serverTimestamp();
+            data.submittedBy = currentUser ? currentUser.uid : 'anon';
+
+            const successScreen = document.getElementById('success-screen');
+            if(successScreen) successScreen.classList.remove('hidden');
+
+            try {
+                const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'surveys'), data);
+                setTimeout(() => {
+                    if(successScreen) successScreen.classList.add('hidden');
+                    e.target.reset();
+                    showAuditDetail(docRef.id, data);
+                }, 1800);
+            } catch(err) { alert("Submission failed."); }
+        };
+
+        // UI Builders
+        function buildMobileForm() {
+            const q = [
+                { id: 'sec1', l: 'Household Profile', qs: [
+                    { id: 'q3', m: 'വീടിന്റെ സ്വഭാവം', e: 'House Type', o: ['Independent', 'Apartment'] },
+                    { id: 'q4', m: 'പ്രധാന ജലസ്രോതസ്സ്', e: 'Water Source', o: ['Piped Supply', 'Well', 'Tanker'] }
+                ]},
+                { id: 'sec2', l: 'Personal Habits', qs: [
+                    { id: 'q7', m: 'കുളിക്കുന്ന രീതി:', e: 'Bathing Method', o: ['Bucket & Mug', 'Shower'] },
+                    { id: 'q8', m: 'ടാപ്പ് തുറന്നിടാറുണ്ടോ?', e: 'Tap Habit (Brushing)', o: ['Always', 'Sometimes', 'Never'] }
+                ]},
+                { id: 'sec3', l: 'Water Infrastructure', qs: [
+                    { id: 'q5', m: 'വാട്ടർ ടാങ്ക് ഉണ്ടോ?', e: 'Storage Tank', o: ['Yes', 'No'] },
+                    { id: 'q6', m: 'ടാങ്ക് അലാറം ഉണ്ടോ?', e: 'Overflow Sensor', o: ['Yes', 'No (Overflows)'], p: 'q5', t: 'Yes' },
+                    { id: 'q11', m: 'RO പ്യൂരിഫയർ ഉണ്ടോ?', e: 'RO System', o: ['Yes', 'No'] },
+                    { id: 'q12', m: 'RO പാഴ്ജലം ഉപയോഗിക്കാറുണ്ടോ?', e: 'RO Waste Reuse', o: ['Reused', 'Wasted'], p: 'q11', t: 'Yes' }
+                ]},
+                { id: 'sec4', l: 'Health & Integrity', qs: [
+                    { id: 'q17', m: 'ടാപ്പുകളിൽ ചോർച്ചയുണ്ടോ?', e: 'Leaking Taps', o: ['Yes', 'No'] },
+                    { id: 'q18', m: 'ഫ്ലഷ് ടാങ്ക് ചോർച്ചയുണ്ടോ?', e: 'Flush Leak', o: ['Yes', 'No'] },
+                    { id: 'q20', m: 'മഴവെള്ള സംഭരണി ഉണ്ടോ?', e: 'Rain Harvest', o: ['Yes', 'No'] }
+                ]}
+            ];
+
+            const container = document.getElementById('dynamic-questions');
+            if(container) {
+                container.innerHTML = q.map(s => `
+                    <div class="space-y-4">
+                        <h4 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-5">${s.l}</h4>
+                        <div class="space-y-4">
+                            ${s.qs.map(item => `
+                                <div class="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm transition-all duration-300 ${item.p ? 'hidden' : ''}" id="grp-${item.id}" data-parent="${item.p||''}" data-trigger="${item.t||''}">
+                                    <div class="mb-5 text-center sm:text-left">
+                                        <p class="text-sm font-extrabold text-slate-800 leading-snug">${item.m}</p>
+                                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">${item.e}</p>
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-2">
+                                        ${item.o.map(opt => `
+                                            <label class="relative cursor-pointer group">
+                                                <input type="radio" name="${item.id}" value="${opt}" class="hidden peer" ${item.p ? '' : 'required'}>
+                                                <div class="flex items-center justify-between px-5 py-4 rounded-2xl border-2 border-slate-50 bg-slate-50/50 peer-checked:border-blue-600 peer-checked:bg-white transition-all active:scale-95 shadow-sm">
+                                                    <span class="text-xs font-bold text-slate-600 peer-checked:text-blue-700">${opt}</span>
+                                                    <div class="w-5 h-5 rounded-full border-2 border-slate-200 peer-checked:border-blue-600 flex items-center justify-center">
+                                                        <div class="w-2.5 h-2.5 bg-blue-600 rounded-full hidden peer-checked:block"></div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                // Conditional Logic Handler
+                document.getElementById('auditForm').addEventListener('change', (e) => {
+                    const n = e.target.name;
+                    const v = e.target.value;
+                    document.querySelectorAll(`[data-parent="${n}"]`).forEach(el => {
+                        if(v === el.dataset.trigger) { 
+                            el.classList.remove('hidden'); 
+                            el.querySelectorAll('input').forEach(i => i.required = true); 
+                        }
+                        else { 
+                            el.classList.add('hidden'); 
+                            el.querySelectorAll('input').forEach(i => { i.required = false; i.checked = false; }); 
+                        }
+                    });
+                });
+            }
+        }
+
+        window.showAuditDetail = (id, override = null) => {
+            const s = override || surveys.find(x => x.id === id);
+            if(!s) return;
+            const row = (l, v) => `<div class="flex justify-between py-4 border-b border-slate-50 px-8"><span class="text-[10px] text-slate-400 font-black uppercase tracking-widest">${l}</span><span class="text-xs font-bold text-slate-900">${v||'—'}</span></div>`;
+            
+            const canvas = document.getElementById('report-canvas');
+            if(canvas) {
+                canvas.innerHTML = `
+                    <div class="p-8 bg-white">
+                        <div class="flex justify-between items-center mb-10 pb-8 border-b-2 border-slate-100">
+                            <img src="nss_logo.png" class="h-12" onerror="this.style.display='none'">
+                            <div class="text-center">
+                                <h2 class="text-xs font-black tracking-widest text-slate-900 uppercase">Verification Summary</h2>
+                                <p class="text-[8px] font-bold text-slate-400 uppercase mt-1">MG College NSS Audit Archive</p>
+                            </div>
+                            <img src="college_logo.png" class="h-12" onerror="this.style.display='none'">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-10">
+                            <div class="bg-slate-50 p-5 rounded-3xl">
+                                <p class="text-[8px] font-black text-slate-400 uppercase mb-2">Household</p>
+                                <p class="text-sm font-black text-slate-900 leading-none">${s.headName}</p>
+                            </div>
+                            <div class="bg-slate-50 p-5 rounded-3xl text-right">
+                                <p class="text-[8px] font-black text-slate-400 uppercase mb-2">Ref ID</p>
+                                <p class="text-sm font-black text-slate-900 leading-none">W${s.wardNo}-${s.houseNo}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-0.5 mb-10">
+                            ${row('Water Source', s.q4)}
+                            ${row('Overflow Sensor', s.q6)}
+                            ${row('Bathing Style', s.q7)}
+                            ${row('Waste Management', s.q12)}
+                            ${row('Rain Harvest', s.q20)}
+                        </div>
+
+                        <div class="bg-emerald-600 p-8 rounded-[40px] text-white text-center shadow-xl shadow-emerald-200">
+                            <i class="fa-solid fa-water text-3xl mb-4 text-emerald-300"></i>
+                            <h4 class="text-lg font-black uppercase tracking-tight">${s.pledge}</h4>
+                            <p class="text-[10px] font-medium opacity-80 mt-2">Official Digital Certificate of Water Stewardship.</p>
+                        </div>
+
+                        <div class="mt-16 pt-8 border-t flex justify-between items-end border-slate-100 px-4">
+                            <div class="text-left">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-4">Verification By</p>
+                                <p class="text-xs font-bold text-slate-800 underline decoration-blue-500 decoration-2 underline-offset-4">${s.volunteerName}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-black text-slate-100 italic">Jal Mahotsav</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                switchTab('view');
+            }
+        };
+
+        window.copyReportSummary = () => {
+            const members = document.getElementById('stat-members')?.innerText || '0';
+            const pledges = document.getElementById('stat-pledges')?.innerText || '0';
+            const text = `MG NSS WATER AUDIT REPORT\n--------------------\nTotal Audits: ${surveys.length}\nCommunity Impact: ${members}\nPledges Taken: ${pledges}`;
+            navigator.clipboard.writeText(text).then(() => alert("Quick stats copied for NSS Report!"));
+        };
+
+        window.copyAppLink = () => {
+            navigator.clipboard.writeText(window.location.href).then(() => alert("App link copied to clipboard!"));
+        };
+
+        window.exportCSV = () => {
+            if(!surveys.length) return;
+            const headers = Object.keys(surveys[0]).filter(k => k !== 'id' && k !== 'createdAt').join(',');
+            const rows = surveys.map(s => Object.keys(s).filter(k => k !== 'id' && k !== 'createdAt').map(k => `"${s[k]||''}"`).join(',')).join('\n');
+            const blob = new Blob([`${headers}\n${rows}`], {type: 'text/csv'});
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `NSS_WaterAudit_Data_${new Date().toISOString().split('T')[0]}.csv`; 
+            a.click();
+        };
+
+        window.resetForm = () => { if(confirm("Clear audit session?")) document.getElementById('auditForm').reset(); };
+
+        startApp();
+        buildMobileForm();
+        switchTab('dashboard');
+
+    </script>
+</body>
+</html>
+
