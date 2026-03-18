@@ -16,6 +16,10 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- jsPDF & AutoTable for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
@@ -174,6 +178,11 @@
                 <button onclick="exportJSON()" class="snap-start shrink-0 w-36 bg-purple-50 border border-purple-100 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
                     <div class="w-10 h-10 bg-purple-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-purple-200"><i class="fa-solid fa-file-code"></i></div>
                     <div class="text-left"><p class="text-sm font-extrabold text-purple-900">JSON Data</p><p class="text-[9px] font-bold text-purple-600 uppercase">Raw Export</p></div>
+                </button>
+                <!-- NEW: PDF Export Button -->
+                <button onclick="exportPDF()" class="snap-start shrink-0 w-36 bg-rose-50 border border-rose-100 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
+                    <div class="w-10 h-10 bg-rose-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-rose-200"><i class="fa-solid fa-file-pdf"></i></div>
+                    <div class="text-left"><p class="text-sm font-extrabold text-rose-900">PDF Data</p><p class="text-[9px] font-bold text-rose-600 uppercase">Master Report</p></div>
                 </button>
                 <button onclick="copyAppLink()" class="snap-start shrink-0 w-36 bg-slate-50 border border-slate-200 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
                     <div class="w-10 h-10 bg-slate-800 text-white rounded-[14px] flex items-center justify-center shadow-md"><i class="fa-solid fa-share-nodes"></i></div>
@@ -1108,6 +1117,54 @@ _Generated via MG College NSS Water Audit System_`.trim();
             a.download = `NSS_WaterAudit_RawData_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
             window.showAlert("Raw database export complete.", "JSON Exported", "success");
+        };
+
+        window.exportPDF = () => {
+            triggerHaptic();
+            if(!surveys.length) return window.showAlert("No data available to export.", "Empty Database", "info");
+
+            window.showAlert("Generating PDF report, please wait...", "Processing", "info");
+
+            setTimeout(() => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF({ orientation: 'landscape' });
+
+                    doc.setFontSize(18);
+                    doc.text("MG College NSS - Master Water Audit Report", 14, 15);
+                    doc.setFontSize(10);
+                    doc.setTextColor(100);
+                    doc.text(`Generated: ${new Date().toLocaleDateString()} | Total Records: ${surveys.length}`, 14, 22);
+
+                    const keys = Object.keys(exportHeaderMap);
+                    const headers = keys.map(k => exportHeaderMap[k]);
+                    const data = surveys.map(s => keys.map(k => {
+                        let val = s[k];
+                        if(val === undefined || val === null) return "N/A";
+                        return val.toString();
+                    }));
+
+                    doc.autoTable({
+                        startY: 28,
+                        head: [headers],
+                        body: data,
+                        theme: 'grid',
+                        styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
+                        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
+                        alternateRowStyles: { fillColor: [248, 250, 252] },
+                        margin: { top: 28, right: 10, bottom: 15, left: 10 },
+                        horizontalPageBreak: true,
+                        horizontalPageBreakRepeat: 0,
+                    });
+
+                    doc.save(`NSS_WaterAudit_Master_${new Date().toISOString().split('T')[0]}.pdf`);
+                    window.closeCustomAlert();
+                    window.showAlert("Master PDF report generated and downloaded.", "PDF Exported", "success");
+                } catch (error) {
+                    console.error(error);
+                    window.showAlert("Failed to generate PDF. Check console for details.", "Export Error", "error");
+                }
+            }, 500);
         };
 
         window.resetFormInternal = () => {
