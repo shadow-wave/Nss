@@ -16,10 +16,6 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- jsPDF & AutoTable for PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
@@ -75,10 +71,13 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Printing Adjustments */
         @media print {
             .print-hidden { display: none !important; }
             body { background: white !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
-            .report-card { border: none !important; box-shadow: none !important; }
+            .report-card { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
+            .page-break { page-break-after: always; break-after: page; }
+            .page-break:last-child { page-break-after: auto; break-after: auto; }
         }
     </style>
 
@@ -179,10 +178,10 @@
                     <div class="w-10 h-10 bg-purple-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-purple-200"><i class="fa-solid fa-file-code"></i></div>
                     <div class="text-left"><p class="text-sm font-extrabold text-purple-900">JSON Data</p><p class="text-[9px] font-bold text-purple-600 uppercase">Raw Export</p></div>
                 </button>
-                <!-- NEW: PDF Export Button -->
-                <button onclick="exportPDF()" class="snap-start shrink-0 w-36 bg-rose-50 border border-rose-100 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
+                <!-- NEW: PDF Export Button (Admin Only) -->
+                <button id="admin-export-pdf-btn" onclick="exportPDF()" class="hidden snap-start shrink-0 w-36 bg-rose-50 border border-rose-100 p-4 rounded-[24px] flex-col items-start gap-3 active:scale-95 transition shadow-sm">
                     <div class="w-10 h-10 bg-rose-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-rose-200"><i class="fa-solid fa-file-pdf"></i></div>
-                    <div class="text-left"><p class="text-sm font-extrabold text-rose-900">PDF Data</p><p class="text-[9px] font-bold text-rose-600 uppercase">Master Report</p></div>
+                    <div class="text-left"><p class="text-sm font-extrabold text-rose-900">Batch PDF</p><p class="text-[9px] font-bold text-rose-600 uppercase">All Reports</p></div>
                 </button>
                 <button onclick="copyAppLink()" class="snap-start shrink-0 w-36 bg-slate-50 border border-slate-200 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
                     <div class="w-10 h-10 bg-slate-800 text-white rounded-[14px] flex items-center justify-center shadow-md"><i class="fa-solid fa-share-nodes"></i></div>
@@ -310,7 +309,7 @@
         </div>
 
         <!-- REPORT VIEW -->
-        <div id="view-report" class="hidden max-w-xl mx-auto p-4 animate-view print:p-0 pb-10">
+        <div id="view-report" class="hidden max-w-xl mx-auto p-4 animate-view print:p-0 pb-10 print:max-w-none">
             <div class="flex items-center justify-between mb-6 print-hidden">
                 <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 active:scale-90 transition">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -569,6 +568,17 @@
             const searchInput = document.getElementById('search-input');
             const search = searchInput ? searchInput.value.toLowerCase() : '';
             const filtered = surveys.filter(s => (s.headName || '').toLowerCase().includes(search) || (s.houseNo || '').toLowerCase().includes(search));
+
+            const pdfBtn = document.getElementById('admin-export-pdf-btn');
+            if (pdfBtn) {
+                if (isAdmin) {
+                    pdfBtn.classList.remove('hidden');
+                    pdfBtn.classList.add('flex');
+                } else {
+                    pdfBtn.classList.add('hidden');
+                    pdfBtn.classList.remove('flex');
+                }
+            }
 
             const stats = { 
                 total: surveys.length, members: 0, pledges: 0, leaks: 0, 
@@ -907,91 +917,97 @@
             }
         }
 
-        window.showAuditDetail = (id, override = null) => {
-            const s = override || surveys.find(x => x.id === id);
-            if(!s) return;
+        // Global Helper for Report HTML (Used by Single View & Batch Print)
+        function getReportHTML(s) {
             const row = (l, v) => `<div class="flex justify-between items-center py-4 border-b border-slate-100"><span class="text-[10px] text-slate-400 font-black uppercase tracking-widest w-1/2 pr-2">${l}</span><span class="text-[13px] font-bold text-slate-800 text-right w-1/2 break-words">${v||'—'}</span></div>`;
             const head = (l) => `<h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em] mt-8 mb-2 border-l-4 border-blue-500 pl-2">${l}</h4>`;
             
-            const canvas = document.getElementById('report-canvas');
-            if(canvas) {
-                canvas.innerHTML = `
-                    <div class="p-6 sm:p-10 bg-white">
-                        <div class="flex justify-between items-center mb-10 border-b-2 border-slate-900 pb-6">
-                            <img src="nss_logo.png" class="h-10 sm:h-12" onerror="this.style.display='none'">
-                            <div class="text-center px-2">
-                                <h2 class="text-[10px] sm:text-xs font-black tracking-widest text-slate-900 uppercase">Verified Audit</h2>
-                                <p class="text-[7px] sm:text-[8px] font-bold text-slate-500 uppercase mt-1">MG College • Units 63 & 30</p>
-                            </div>
-                            <img src="college_logo.png" class="h-10 sm:h-12" onerror="this.style.display='none'">
+            return `
+                <div class="p-6 sm:p-10 bg-white page-break border-b-[16px] border-slate-100 print:border-none">
+                    <div class="flex justify-between items-center mb-10 border-b-2 border-slate-900 pb-6">
+                        <img src="nss_logo.png" class="h-10 sm:h-12" onerror="this.style.display='none'">
+                        <div class="text-center px-2">
+                            <h2 class="text-[10px] sm:text-xs font-black tracking-widest text-slate-900 uppercase">Verified Audit</h2>
+                            <p class="text-[7px] sm:text-[8px] font-bold text-slate-500 uppercase mt-1">MG College • Units 63 & 30</p>
                         </div>
-                        
-                        <div class="bg-slate-50 p-6 rounded-[28px] mb-8 border border-slate-100">
-                            <div class="mb-4">
-                                <p class="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">Household</p>
-                                <p class="text-xl font-black text-slate-900 leading-none">${s.headName}</p>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
-                                <div><p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">House ID</p><p class="text-sm font-bold text-slate-800 mt-0.5">${s.houseNo}</p></div>
-                                <div><p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Ward No</p><p class="text-sm font-bold text-slate-800 mt-0.5">${s.wardNo}</p></div>
-                            </div>
+                        <img src="college_logo.png" class="h-10 sm:h-12" onerror="this.style.display='none'">
+                    </div>
+                    
+                    <div class="bg-slate-50 p-6 rounded-[28px] mb-8 border border-slate-100">
+                        <div class="mb-4">
+                            <p class="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">Household</p>
+                            <p class="text-xl font-black text-slate-900 leading-none">${s.headName}</p>
                         </div>
-
-                        <div class="space-y-1 mb-10 px-2">
-                            ${head('General & Climate')}
-                            ${row('Est. Daily Usage', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
-                            ${row('Per Capita Usage', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' Liters/Person' : '—')}
-                            ${row('Water Source', s.q4)}
-                            ${row('Summer Scarcity', s.q22)}
-                            ${row('Garden/Agriculture', s.q24)}
-                            ${row('Kitchen Water Reuse', s.q25)}
-                            
-                            ${head('Storage & Hygiene')}
-                            ${row('Storage Tank', s.q5)}
-                            ${row('Tank Alarm', s.q6)}
-                            ${row('Bathing Style', s.q7)}
-                            ${row('Tap Discipline', s.q8)}
-                            ${row('Water-Saving Taps', s.q23)}
-                            
-                            ${head('Kitchen & Laundry')}
-                            ${row('Dish Washing', s.q9)}
-                            ${row('Veggie Washing', s.q10)}
-                            ${row('RO Purifier', s.q11)}
-                            ${row('RO Waste Reuse', s.q12)}
-                            ${row('Laundry Load', s.q13)}
-
-                            ${head('Outdoor & Leaks')}
-                            ${row('Vehicle Wash', s.q14)}
-                            ${row('Yard Cleaning', s.q15)}
-                            ${row('Watering Time', s.q16)}
-                            ${row('Active Tap Leaks', s.q17 === 'Yes' ? `Yes (${s.q17_leakCount} spots)` : 'No')}
-                            ${row('Flush Leaks', s.q18)}
-                            ${row('Jal Mahotsav Aware', s.q19)}
-                            ${row('Rain Harvest', s.q20)}
-                        </div>
-
-                        <div class="bg-slate-900 p-8 rounded-[32px] text-white text-center shadow-2xl relative overflow-hidden">
-                            <i class="fa-solid fa-certificate absolute -right-4 -bottom-4 text-white/5 text-7xl"></i>
-                            <div class="relative z-10">
-                                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                                    <i class="fa-solid fa-leaf text-emerald-400"></i>
-                                </div>
-                                <h4 class="text-base sm:text-lg font-black uppercase tracking-tight text-emerald-300 mb-2">${s.pledge}</h4>
-                                <p class="text-[9px] font-bold uppercase tracking-widest opacity-50">Official Declaration</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-12 pt-8 flex justify-between items-end border-t border-slate-100 px-2">
-                            <div class="text-left">
-                                <p class="text-xs font-black text-slate-900 uppercase tracking-wider">${s.volunteerName}</p>
-                                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Volunteer Signature</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Jal Mahotsav</p>
-                            </div>
+                        <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+                            <div><p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">House ID</p><p class="text-sm font-bold text-slate-800 mt-0.5">${s.houseNo}</p></div>
+                            <div><p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Ward No</p><p class="text-sm font-bold text-slate-800 mt-0.5">${s.wardNo}</p></div>
                         </div>
                     </div>
-                `;
+
+                    <div class="space-y-1 mb-10 px-2">
+                        ${head('General & Climate')}
+                        ${row('Est. Daily Usage', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
+                        ${row('Per Capita Usage', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' Liters/Person' : '—')}
+                        ${row('Water Source', s.q4)}
+                        ${row('Summer Scarcity', s.q22)}
+                        ${row('Garden/Agriculture', s.q24)}
+                        ${row('Kitchen Water Reuse', s.q25)}
+                        
+                        ${head('Storage & Hygiene')}
+                        ${row('Storage Tank', s.q5)}
+                        ${row('Tank Alarm', s.q6)}
+                        ${row('Bathing Style', s.q7)}
+                        ${row('Tap Discipline', s.q8)}
+                        ${row('Water-Saving Taps', s.q23)}
+                        
+                        ${head('Kitchen & Laundry')}
+                        ${row('Dish Washing', s.q9)}
+                        ${row('Veggie Washing', s.q10)}
+                        ${row('RO Purifier', s.q11)}
+                        ${row('RO Waste Reuse', s.q12)}
+                        ${row('Laundry Load', s.q13)}
+
+                        ${head('Outdoor & Leaks')}
+                        ${row('Vehicle Wash', s.q14)}
+                        ${row('Yard Cleaning', s.q15)}
+                        ${row('Watering Time', s.q16)}
+                        ${row('Active Tap Leaks', s.q17 === 'Yes' ? `Yes (${s.q17_leakCount} spots)` : 'No')}
+                        ${row('Flush Leaks', s.q18)}
+                        ${row('Jal Mahotsav Aware', s.q19)}
+                        ${row('Rain Harvest', s.q20)}
+                    </div>
+
+                    <div class="bg-slate-900 p-8 rounded-[32px] text-white text-center shadow-2xl relative overflow-hidden print:shadow-none print:border print:border-slate-300">
+                        <i class="fa-solid fa-certificate absolute -right-4 -bottom-4 text-white/5 text-7xl print:text-slate-100"></i>
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm print:bg-slate-800">
+                                <i class="fa-solid fa-leaf text-emerald-400"></i>
+                            </div>
+                            <h4 class="text-base sm:text-lg font-black uppercase tracking-tight text-emerald-300 mb-2">${s.pledge}</h4>
+                            <p class="text-[9px] font-bold uppercase tracking-widest opacity-50">Official Declaration</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 pt-8 flex justify-between items-end border-t border-slate-100 px-2">
+                        <div class="text-left">
+                            <p class="text-xs font-black text-slate-900 uppercase tracking-wider">${s.volunteerName}</p>
+                            <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Volunteer Signature</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Jal Mahotsav</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.showAuditDetail = (id, override = null) => {
+            const s = override || surveys.find(x => x.id === id);
+            if(!s) return;
+            
+            const canvas = document.getElementById('report-canvas');
+            if(canvas) {
+                canvas.innerHTML = getReportHTML(s);
                 switchTab('view');
             }
         };
@@ -1123,46 +1139,19 @@ _Generated via MG College NSS Water Audit System_`.trim();
             triggerHaptic();
             if(!surveys.length) return window.showAlert("No data available to export.", "Empty Database", "info");
 
-            window.showAlert("Generating PDF report, please wait...", "Processing", "info");
+            window.showAlert("Preparing batch report for " + surveys.length + " households. The print dialog will open shortly.", "Generating PDF", "info");
 
             setTimeout(() => {
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF({ orientation: 'landscape' });
-
-                    doc.setFontSize(18);
-                    doc.text("MG College NSS - Master Water Audit Report", 14, 15);
-                    doc.setFontSize(10);
-                    doc.setTextColor(100);
-                    doc.text(`Generated: ${new Date().toLocaleDateString()} | Total Records: ${surveys.length}`, 14, 22);
-
-                    const keys = Object.keys(exportHeaderMap);
-                    const headers = keys.map(k => exportHeaderMap[k]);
-                    const data = surveys.map(s => keys.map(k => {
-                        let val = s[k];
-                        if(val === undefined || val === null) return "N/A";
-                        return val.toString();
-                    }));
-
-                    doc.autoTable({
-                        startY: 28,
-                        head: [headers],
-                        body: data,
-                        theme: 'grid',
-                        styles: { fontSize: 6, cellPadding: 1.5, overflow: 'linebreak' },
-                        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
-                        alternateRowStyles: { fillColor: [248, 250, 252] },
-                        margin: { top: 28, right: 10, bottom: 15, left: 10 },
-                        horizontalPageBreak: true,
-                        horizontalPageBreakRepeat: 0,
-                    });
-
-                    doc.save(`NSS_WaterAudit_Master_${new Date().toISOString().split('T')[0]}.pdf`);
-                    window.closeCustomAlert();
-                    window.showAlert("Master PDF report generated and downloaded.", "PDF Exported", "success");
-                } catch (error) {
-                    console.error(error);
-                    window.showAlert("Failed to generate PDF. Check console for details.", "Export Error", "error");
+                const canvas = document.getElementById('report-canvas');
+                if (canvas) {
+                    canvas.innerHTML = surveys.map(s => getReportHTML(s)).join('');
+                    switchTab('view');
+                    
+                    // Allow DOM to render images before triggering print
+                    setTimeout(() => {
+                        window.print();
+                        window.closeCustomAlert();
+                    }, 1500);
                 }
             }, 500);
         };
