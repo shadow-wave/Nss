@@ -71,48 +71,41 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Strict A4 Print Container Styling */
-        .a4-print-container {
-            width: 100%;
-            max-width: 210mm;
-            min-height: 297mm;
-            margin: 0 auto;
-            padding: 15mm;
-            background: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .print-exact-color {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
+        /* Highly Optimized Printing Adjustments - Resolves "White Pages" issue */
         @media print {
             .print-hidden { display: none !important; }
-            body { 
+            html, body { 
                 background: white !important; 
                 padding: 0 !important; 
                 margin: 0 !important; 
                 height: auto !important; 
+                width: auto !important;
                 overflow: visible !important; 
             }
+            main, #view-report, #report-canvas {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+                position: relative !important;
+            }
+            .print-exact-color {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
             .a4-print-container {
-                width: 210mm !important;
-                height: 297mm !important; /* Force exact A4 height */
-                max-height: 297mm !important;
-                max-width: 210mm !important;
-                margin: 0 !important;
-                padding: 12mm !important; /* Tighten padding for print */
-                box-shadow: none !important;
-                border-radius: 0 !important;
+                width: 100% !important;
+                height: auto !important; 
+                min-height: 100vh !important;
+                overflow: hidden !important;
                 page-break-after: always;
                 page-break-inside: avoid;
-                overflow: hidden !important;
+                box-sizing: border-box;
+                padding: 10mm 15mm !important;
+                margin: 0 auto !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
             .a4-print-container:last-child {
                 page-break-after: auto;
@@ -173,7 +166,7 @@
     </header>
 
     <!-- Main App Content -->
-    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full print:p-0 print:m-0 print:block">
+    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full print:h-auto print:overflow-visible print:block print:p-0 print:m-0">
         
         <!-- DASHBOARD VIEW -->
         <div id="view-dashboard" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view print-hidden">
@@ -348,7 +341,7 @@
         </div>
 
         <!-- REPORT VIEW (Where the PDF generates) -->
-        <div id="view-report" class="hidden max-w-2xl print:max-w-none print:w-full mx-auto p-4 animate-view print:p-0 pb-10 print:pb-0 print:bg-white">
+        <div id="view-report" class="hidden max-w-3xl print:max-w-none print:w-full mx-auto p-4 animate-view print:p-0 pb-10 print:pb-0 print:bg-white print:h-auto print:overflow-visible print:block">
             <div class="flex items-center justify-between mb-6 print-hidden">
                 <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 active:scale-90 transition">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -358,7 +351,7 @@
                 </button>
             </div>
             <!-- The canvas where the A4 print containers are injected -->
-            <div id="report-canvas" class="bg-transparent report-card w-full"></div>
+            <div id="report-canvas" class="bg-transparent report-card w-full print:h-auto print:overflow-visible print:block"></div>
         </div>
 
         <!-- INFO VIEW -->
@@ -967,57 +960,58 @@
         function getReportHTML(s, isBatchMode = false) {
             const row = (l, v, isLast = false) => `
                 <div class="flex border-slate-300 print:border-slate-800 ${isLast ? '' : 'border-b'}">
-                    <div class="w-1/2 p-2 print:p-1.5 text-[11px] print:text-[10px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">${l}</div>
-                    <div class="w-1/2 p-2 print:p-1.5 text-[12px] print:text-[11px] font-black text-slate-900 break-words flex items-center">${v||'—'}</div>
+                    <div class="w-[50%] p-2 print:p-[5px] text-[11px] print:text-[8px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">${l}</div>
+                    <div class="w-[50%] p-2 print:p-[5px] text-[12px] print:text-[9px] font-black text-slate-900 break-words flex items-center">${v||'—'}</div>
                 </div>`;
                 
             const head = (l) => `
-                <h3 class="text-xs print:text-[11px] font-black text-white bg-blue-700 print:bg-slate-800 px-3 py-2 print:py-1.5 uppercase tracking-widest print-exact-color">${l}</h3>`;
+                <h3 class="text-xs print:text-[9px] font-black text-white bg-blue-700 print:bg-slate-800 px-3 py-2 print:py-1 uppercase tracking-widest print-exact-color m-0">${l}</h3>`;
             
             return `
-                <div class="p-6 print:p-0 bg-white w-full box-border flex flex-col relative a4-print-container page-break border-b-[16px] border-slate-100 print:border-none">
+                <div class="p-6 print:p-0 bg-white w-full box-border flex flex-col a4-print-container">
+                    
                     <!-- Header -->
-                    <div class="flex justify-between items-center mb-6 print:mb-4 border-b-2 border-slate-900 pb-6 print:pb-4 flex-shrink-0">
-                        <img src="nss_logo.png" class="h-16 w-16 print:h-[60px] print:w-[60px] object-contain" onerror="this.style.display='none'">
-                        <div class="text-center px-4 flex-grow">
-                            <h2 class="text-xl print:text-[16px] font-black tracking-widest text-slate-900 uppercase leading-tight">HOUSEHOLD WATER AUDIT SURVEY</h2>
-                            <p class="text-sm print:text-[12px] font-extrabold text-slate-800 mt-2 print:mt-1">Mahatma Gandhi College, Iritty</p>
-                            <p class="text-[10px] print:text-[9px] font-bold text-slate-600 mt-0.5">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
-                            <p class="text-[11px] print:text-[10px] font-bold text-slate-800 uppercase mt-1">NSS UNITS 63 & 30</p>
-                            <p class="text-[9px] print:text-[8px] font-bold text-blue-600 mt-1.5 tracking-wider">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
+                    <div class="flex justify-between items-center mb-6 print:mb-3 border-b-2 border-slate-900 pb-6 print:pb-3 flex-shrink-0">
+                        <img src="nss_logo.png" class="h-16 w-16 print:h-[50px] print:w-[50px] object-contain" onerror="this.style.display='none'">
+                        <div class="text-center px-2 flex-grow">
+                            <h2 class="text-xl print:text-[14px] font-black tracking-widest text-slate-900 uppercase leading-tight m-0 p-0">HOUSEHOLD WATER AUDIT SURVEY</h2>
+                            <p class="text-sm print:text-[10px] font-extrabold text-slate-800 mt-2 print:mt-1 m-0 p-0">Mahatma Gandhi College, Iritty</p>
+                            <p class="text-[10px] print:text-[8px] font-bold text-slate-600 mt-0.5 m-0 p-0">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
+                            <p class="text-[11px] print:text-[9px] font-bold text-slate-800 uppercase mt-1 m-0 p-0">NSS UNITS 63 & 30</p>
+                            <p class="text-[9px] print:text-[7px] font-bold text-blue-600 mt-1.5 print:mt-1 tracking-wider m-0 p-0">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
                         </div>
-                        <img src="college_logo.png" class="h-16 w-16 print:h-[60px] print:w-[60px] object-contain" onerror="this.style.display='none'">
+                        <img src="college_logo.png" class="h-16 w-16 print:h-[50px] print:w-[50px] object-contain" onerror="this.style.display='none'">
                     </div>
                     
-                    <!-- Household Info Metadata -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-4 print:gap-x-12 mb-6 print:mb-4 flex-shrink-0">
-                        <div>
-                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1 mb-2">
-                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">SURVEY DATE</div>
-                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.date || '—'}</div>
+                    <!-- Household Info Metadata Grid -->
+                    <div class="flex flex-col sm:flex-row print:flex-row gap-4 print:gap-4 mb-6 print:mb-3 flex-shrink-0">
+                        <div class="flex-1 border border-slate-300 print:border-slate-800 rounded-md print:rounded-none overflow-hidden">
+                            <div class="flex border-b border-slate-300 print:border-slate-800">
+                                <div class="w-2/5 p-2 print:p-1.5 text-[10px] print:text-[8px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">SURVEY DATE</div>
+                                <div class="w-3/5 p-2 print:p-1.5 text-sm print:text-[10px] font-black text-slate-900">${s.date || '—'}</div>
                             </div>
-                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1">
-                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">HEAD OF HOUSEHOLD</div>
-                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.headName}</div>
+                            <div class="flex">
+                                <div class="w-2/5 p-2 print:p-1.5 text-[10px] print:text-[8px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">HEAD OF HOUSEHOLD</div>
+                                <div class="w-3/5 p-2 print:p-1.5 text-sm print:text-[10px] font-black text-slate-900">${s.headName}</div>
                             </div>
                         </div>
-                        <div>
-                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1 mb-2">
-                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">HOUSE ID</div>
-                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.houseNo}</div>
+                        <div class="flex-1 border border-slate-300 print:border-slate-800 rounded-md print:rounded-none overflow-hidden">
+                            <div class="flex border-b border-slate-300 print:border-slate-800">
+                                <div class="w-2/5 p-2 print:p-1.5 text-[10px] print:text-[8px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">HOUSE ID</div>
+                                <div class="w-3/5 p-2 print:p-1.5 text-sm print:text-[10px] font-black text-slate-900">${s.houseNo}</div>
                             </div>
-                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1">
-                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">WARD NO</div>
-                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.wardNo}</div>
+                            <div class="flex">
+                                <div class="w-2/5 p-2 print:p-1.5 text-[10px] print:text-[8px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">WARD NO</div>
+                                <div class="w-3/5 p-2 print:p-1.5 text-sm print:text-[10px] font-black text-slate-900">${s.wardNo}</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Main Data Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-6 print:gap-x-10 gap-y-4 print:gap-y-4 flex-grow content-start">
+                    <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-6 print:gap-x-6 gap-y-4 print:gap-y-3 mb-6 print:mb-2 flex-grow">
                         <!-- Column 1 -->
                         <div class="flex flex-col gap-4 print:gap-3">
-                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                            <div class="border border-slate-300 print:border-slate-800 rounded-b-md print:rounded-none overflow-hidden">
                                 ${head('GENERAL & CLIMATE')}
                                 ${row('EST. DAILY USAGE', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
                                 ${row('PER CAPITA USAGE', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' L/Person' : '—')}
@@ -1027,7 +1021,7 @@
                                 ${row('KITCHEN WATER REUSE', s.q25, true)}
                             </div>
                             
-                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                            <div class="border border-slate-300 print:border-slate-800 rounded-b-md print:rounded-none overflow-hidden">
                                 ${head('KITCHEN & LAUNDRY')}
                                 ${row('DISH WASHING', s.q9)}
                                 ${row('VEGGIE WASHING', s.q10)}
@@ -1039,7 +1033,7 @@
                         
                         <!-- Column 2 -->
                         <div class="flex flex-col gap-4 print:gap-3">
-                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                            <div class="border border-slate-300 print:border-slate-800 rounded-b-md print:rounded-none overflow-hidden">
                                 ${head('STORAGE & HYGIENE')}
                                 ${row('STORAGE TANK', s.q5)}
                                 ${row('TANK ALARM', s.q6)}
@@ -1048,7 +1042,7 @@
                                 ${row('WATER-SAVING TAPS', s.q23, true)}
                             </div>
                             
-                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                            <div class="border border-slate-300 print:border-slate-800 rounded-b-md print:rounded-none overflow-hidden">
                                 ${head('OUTDOOR & LEAKS')}
                                 ${row('VEHICLE WASH', s.q14)}
                                 ${row('YARD CLEANING', s.q15)}
@@ -1064,7 +1058,7 @@
                     ${isBatchMode ? '' : (() => {
                         const r = generateRecommendations(s);
                         return `
-                        <div class="mt-6 mb-4 print:hidden flex-shrink-0">
+                        <div class="mb-6 print:hidden">
                             <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 border-l-4 border-slate-800 pl-2">Personalized Audit Suggestions</h4>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
@@ -1095,19 +1089,20 @@
                     })()}
 
                     <!-- Footer Section (Pushed to bottom of flex container) -->
-                    <div class="mt-auto pt-6 print:pt-4 flex-shrink-0">
-                        <div class="bg-emerald-50 print:bg-emerald-100 print-exact-color border-2 border-emerald-200 print:border-emerald-600 p-4 print:p-4 rounded-2xl print:rounded-xl text-center mb-10 print:mb-8">
-                            <h4 class="text-base print:text-[14px] font-black uppercase tracking-tight text-emerald-700 print:text-emerald-900 mb-1 leading-none print:leading-tight">${s.pledge}</h4>
-                            <p class="text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-emerald-600/70 print:text-emerald-800 mt-2">OFFICIAL DECLARATION OF WATER CONSERVATION</p>
+                    <div class="mt-auto print:mt-auto pt-6 print:pt-4 flex-shrink-0">
+                        <div class="bg-emerald-50 print:bg-transparent print-exact-color border-2 border-emerald-200 print:border-slate-800 p-4 print:p-2 rounded-2xl print:rounded-none text-center mb-6 print:mb-4">
+                            <h4 class="text-base print:text-[11px] font-black uppercase tracking-tight text-emerald-700 print:text-slate-900 mb-1 leading-none print:leading-tight">${s.pledge}</h4>
+                            <p class="text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-emerald-600/70 print:text-slate-500 print:mt-1">OFFICIAL DECLARATION OF WATER CONSERVATION</p>
                         </div>
 
-                        <div class="flex justify-between items-end pb-4 px-4 print:px-2">
+                        <div class="flex justify-between items-end pb-4 px-4 print:px-2 border-t-2 border-slate-900 pt-4">
                             <div class="text-left w-1/3">
-                                <p class="text-sm print:text-xs font-black text-slate-900 uppercase tracking-wider mb-1">${s.volunteerName}</p>
-                                <p class="text-[10px] print:text-[8px] font-bold text-slate-500 uppercase tracking-widest border-t-2 border-slate-300 print:border-slate-800 pt-1">VOLUNTEER SIGNATURE</p>
+                                <p class="text-sm print:text-[10px] font-black text-slate-900 uppercase tracking-wider mb-1">${s.volunteerName}</p>
+                                <p class="text-[10px] print:text-[7px] font-bold text-slate-500 uppercase tracking-widest border-t border-slate-400 print:border-slate-800 pt-1">VOLUNTEER SIGNATURE</p>
                             </div>
                             <div class="text-right w-1/3">
-                                <p class="text-base print:text-sm font-black text-slate-400 print:text-slate-800 uppercase tracking-widest">JAL MAHOTSAV</p>
+                                <p class="text-base print:text-[11px] font-black text-slate-400 print:text-slate-800 uppercase tracking-widest">JAL MAHOTSAV</p>
+                                <p class="text-[8px] print:text-[6px] font-bold text-slate-400 print:text-slate-500 uppercase tracking-widest mt-0.5">MG College NSS</p>
                             </div>
                         </div>
                     </div>
