@@ -78,6 +78,7 @@
             .report-card { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
             .page-break { page-break-after: always; break-after: page; }
             .page-break:last-child { page-break-after: auto; break-after: auto; }
+            .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
         }
     </style>
 
@@ -918,7 +919,44 @@
         }
 
         // Global Helper for Report HTML (Used by Single View & Batch Print)
-        function getReportHTML(s) {
+        function generateRecommendations(s) {
+            const improve = []; const good = [];
+
+            // Daily Usage Check (Benchmark: 135 LPCD)
+            if (s.q26 && s.membersCount) {
+                const perCapita = Math.round(parseInt(s.q26) / parseInt(s.membersCount));
+                if (perCapita > 135) improve.push({ title: "High Water Usage", mal: "പ്രതിശീർഷ ജല ഉപയോഗം 135 ലിറ്ററിൽ കൂടുതലാണ്. ഉപയോഗം കുറയ്ക്കുക.", eng: `Usage is ${perCapita}L/person (Standard is 135L).` });
+                else good.push({ title: "Optimal Usage", mal: "ജല ഉപയോഗം നിയന്ത്രിതമാണ്.", eng: `Usage is ${perCapita}L/person, well within standards.` });
+            }
+
+            // Storage & Hygiene
+            if (s.q5 === 'Yes' && s.q6 === 'No (Overflows)') improve.push({ title: "Install Tank Alarm", mal: "വാട്ടർ ലെവൽ അലാറം സ്ഥാപിക്കുക.", eng: "Prevent tank overflows by installing an auto cut-off switch." });
+            else if (s.q6 === 'Yes, installed') good.push({ title: "Smart Storage", mal: "അലാറം ഉപയോഗിക്കുന്നത് വളരെ നല്ല ശീലമാണ്.", eng: "Overflow alarm prevents massive water wastage." });
+
+            if (s.q7 === 'Shower') improve.push({ title: "Efficient Showering", mal: "ബക്കറ്റും മഗ്ഗും ഉപയോഗിക്കുന്നത് വെള്ളം ലാഭിക്കാൻ സഹായിക്കും.", eng: "Use buckets to measure and reduce bathing water." });
+            else if (s.q7 === 'Bucket & Mug') good.push({ title: "Measured Usage", mal: "ബക്കറ്റും മഗ്ഗും ഉപയോഗിക്കുന്നത് വെള്ളം പാഴാകുന്നത് തടയുന്നു.", eng: "Bucket bathing effectively measures and saves water." });
+
+            if (s.q8 === 'Always' || s.q8 === 'Sometimes') improve.push({ title: "Close Taps While Brushing", mal: "പല്ല് തേക്കുമ്പോഴും മുഖം കഴുകുമ്പോഴും ടാപ്പ് അടച്ചുവെക്കുക.", eng: "A running tap wastes up to 6 liters of water every minute." });
+            if (s.q23 === 'No' || s.q23 === "Don't Know") improve.push({ title: "Install Aerators", mal: "ടാപ്പുകളിൽ വാട്ടർ എയറേറ്ററുകൾ ഘടിപ്പിക്കുക.", eng: "Water-saving aerators reduce tap flow by up to 50%." });
+
+            // Kitchen
+            if (s.q9 === 'Under Running Tap') improve.push({ title: "Basin Dishwashing", mal: "പാത്രങ്ങൾ ഒരു ബേസിനിൽ വെള്ളം എടുത്ത് കഴുകുക.", eng: "Using a wash basin for dishes reduces kitchen water use." });
+            if (s.q11 === 'Yes' && s.q12 === 'Wasted / Drained') improve.push({ title: "RO Water Recovery", mal: "RO പ്യൂരിഫയറിൽ നിന്നുള്ള പാഴ്ജലം ശേഖരിച്ച് ഉപയോഗിക്കുക.", eng: "Reuse RO reject water for cleaning floors or flushing." });
+
+            // Outdoor & Agriculture
+            if (s.q14 === 'Hose Pipe') improve.push({ title: "Bucket Car Wash", mal: "വാഹനങ്ങൾ കഴുകാൻ ബക്കറ്റും സ്പോഞ്ചും ഉപയോഗിക്കുക.", eng: "A bucket wash saves hundreds of liters compared to a hose." });
+            if (s.q15 === 'Hose Washing') improve.push({ title: "Sweep Floors", mal: "മുറ്റം ഹോസ് ഉപയോഗിച്ച് കഴുകാതെ അടിച്ചു വാരി വൃത്തിയാക്കുക.", eng: "Sweep yards instead of washing them down with a hose." });
+            if (s.q24 === 'Yes' && s.q25 === 'No') improve.push({ title: "Kitchen Water for Garden", mal: "അടുക്കളയിലെ പാഴ്ജലം കൃഷിക്ക് ഉപയോഗിക്കുക.", eng: "Divert nutrient-rich kitchen greywater to your plants." });
+
+            // Leaks & Harvest
+            if (s.q17 === 'Yes' || s.q18 === 'Yes') improve.push({ title: "Plumbing Repairs", mal: "ചോർച്ചയുള്ള ടാപ്പുകളും പൈപ്പുകളും എത്രയും പെട്ടെന്ന് നന്നാക്കുക.", eng: "Fix plumbing leaks immediately to prevent continuous loss." });
+            if (s.q20 === 'No') improve.push({ title: "Rainwater Harvesting", mal: "മഴവെള്ള സംഭരണി സജ്ജീകരിക്കുക.", eng: "Set up a rainwater harvesting system or recharge pits." });
+            else if (s.q20 === 'Yes') good.push({ title: "Groundwater Hero", mal: "മഴവെള്ള സംഭരണി ഉപയോഗിക്കുന്നത് മാതൃകാപരമാണ്.", eng: "Rainwater harvesting is vital for recharging groundwater." });
+
+            return { improve, good };
+        }
+
+        function getReportHTML(s, excludeRecommendations = false) {
             const row = (l, v) => `<div class="flex justify-between items-center py-4 border-b border-slate-100"><span class="text-[10px] text-slate-400 font-black uppercase tracking-widest w-1/2 pr-2">${l}</span><span class="text-[13px] font-bold text-slate-800 text-right w-1/2 break-words">${v||'—'}</span></div>`;
             const head = (l) => `<h4 class="text-[10px] font-black text-blue-500 uppercase tracking-[0.25em] mt-8 mb-2 border-l-4 border-blue-500 pl-2">${l}</h4>`;
             
@@ -977,7 +1015,42 @@
                         ${row('Rain Harvest', s.q20)}
                     </div>
 
-                    <div class="bg-slate-900 p-8 rounded-[32px] text-white text-center shadow-2xl relative overflow-hidden print:shadow-none print:border print:border-slate-300">
+                    ${excludeRecommendations ? '' : (() => {
+                        const r = generateRecommendations(s);
+                        return `
+                        <div class="mt-6 mb-8 page-break-inside-avoid">
+                            ${head('Personalized Audit Suggestions')}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div class="bg-orange-50/50 p-4 rounded-[20px] border border-orange-100">
+                                    <p class="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i> Areas for Improvement</p>
+                                    <div class="space-y-3">
+                                        ${r.improve.length > 0 ? r.improve.map(item => `
+                                            <div>
+                                                <p class="text-xs font-bold text-slate-800">${item.title}</p>
+                                                <p class="text-[10px] font-bold text-orange-600 mt-0.5 leading-snug">${item.mal}</p>
+                                                <p class="text-[8.5px] text-slate-500 mt-0.5 italic leading-tight">${item.eng}</p>
+                                            </div>
+                                        `).join('<div class="h-px bg-orange-200/50 my-2"></div>') : '<p class="text-[10px] text-slate-500 italic">Excellent! No major improvements needed.</p>'}
+                                    </div>
+                                </div>
+                                <div class="bg-emerald-50/50 p-4 rounded-[20px] border border-emerald-100">
+                                    <p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-thumbs-up"></i> Best Practices</p>
+                                    <div class="space-y-3">
+                                        ${r.good.length > 0 ? r.good.map(item => `
+                                            <div>
+                                                <p class="text-xs font-bold text-slate-800">${item.title}</p>
+                                                <p class="text-[10px] font-bold text-emerald-600 mt-0.5 leading-snug">${item.mal}</p>
+                                                <p class="text-[8.5px] text-slate-500 mt-0.5 italic leading-tight">${item.eng}</p>
+                                            </div>
+                                        `).join('<div class="h-px bg-emerald-200/50 my-2"></div>') : '<p class="text-[10px] text-slate-500 italic">No specific best practices recorded.</p>'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    })()}
+
+                    <div class="bg-slate-900 p-8 rounded-[32px] text-white text-center shadow-2xl relative overflow-hidden print:shadow-none print:border print:border-slate-300 print:mt-10">
                         <i class="fa-solid fa-certificate absolute -right-4 -bottom-4 text-white/5 text-7xl print:text-slate-100"></i>
                         <div class="relative z-10">
                             <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm print:bg-slate-800">
@@ -1007,7 +1080,7 @@
             
             const canvas = document.getElementById('report-canvas');
             if(canvas) {
-                canvas.innerHTML = getReportHTML(s);
+                canvas.innerHTML = getReportHTML(s, false);
                 switchTab('view');
             }
         };
@@ -1144,7 +1217,8 @@ _Generated via MG College NSS Water Audit System_`.trim();
             setTimeout(() => {
                 const canvas = document.getElementById('report-canvas');
                 if (canvas) {
-                    canvas.innerHTML = surveys.map(s => getReportHTML(s)).join('');
+                    // Pass true to exclude recommendations for batch printing
+                    canvas.innerHTML = surveys.map(s => getReportHTML(s, true)).join('');
                     switchTab('view');
                     
                     // Allow DOM to render images before triggering print
@@ -1180,4 +1254,4 @@ _Generated via MG College NSS Water Audit System_`.trim();
 
     </script>
 </body>
-</html>
+    </html>
