@@ -74,12 +74,18 @@
         /* Highly Optimized Printing Adjustments to force 1 Page per Household */
         @media print {
             .print-hidden { display: none !important; }
-            body { background: white !important; padding: 0 !important; height: auto !important; overflow: visible !important; margin: 0 !important; }
-            .report-card { border: none !important; box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; padding: 0 !important; }
+            body { 
+                background: white !important; 
+                padding: 0 !important; 
+                margin: 0 !important; 
+                height: auto !important; 
+                overflow: visible !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
             .page-break { page-break-after: always; break-after: page; }
             .page-break:last-child { page-break-after: auto; break-after: auto; }
-            .page-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
-            @page { margin: 10mm; } /* Tight margins to maximize usable area */
+            @page { size: A4 portrait; margin: 10mm; }
         }
     </style>
 
@@ -311,7 +317,7 @@
         </div>
 
         <!-- REPORT VIEW -->
-        <div id="view-report" class="hidden max-w-xl mx-auto p-4 animate-view print:p-0 pb-10 print:max-w-none">
+        <div id="view-report" class="hidden max-w-xl mx-auto p-4 animate-view print:p-0 pb-10 print:max-w-none print:w-full">
             <div class="flex items-center justify-between mb-6 print-hidden">
                 <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 active:scale-90 transition">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -320,7 +326,7 @@
                     <i class="fa-solid fa-print text-sm"></i> Print PDF
                 </button>
             </div>
-            <div id="report-canvas" class="bg-white rounded-[40px] shadow-xl border border-slate-100 overflow-hidden report-card"></div>
+            <div id="report-canvas" class="bg-transparent report-card"></div>
         </div>
 
         <!-- INFO VIEW -->
@@ -558,7 +564,7 @@
                 if (pin === "6330") { // Using NSS Unit numbers as default PIN
                     isAdmin = true;
                     document.getElementById('admin-btn-text').innerText = "Disable Admin Mode";
-                    window.showAlert("Admin mode enabled. You can now edit and delete records.", "Admin Mode", "success");
+                    window.showAlert("Admin mode enabled. You can now edit, delete records, and Batch Print.", "Admin Mode", "success");
                     renderDashboard();
                 } else if (pin !== null) {
                     window.showAlert("Incorrect PIN.", "Access Denied", "error");
@@ -710,7 +716,6 @@
             window.showConfirm("Are you sure you want to permanently delete this audit record?", async () => {
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'surveys', id));
-                    // Re-render handled by onSnapshot
                 } catch (error) {
                     console.error(error);
                     window.showAlert("Failed to delete record.", "Error", "error");
@@ -737,7 +742,6 @@
                     for(let r of radios) {
                         if(r.value === survey[key]) {
                             r.checked = true;
-                            // Trigger change to handle conditionals
                             r.dispatchEvent(new Event('change', { bubbles: true }));
                         }
                     }
@@ -765,7 +769,7 @@
             const data = Object.fromEntries(new FormData(e.target).entries());
             data.submittedBy = currentUser ? currentUser.uid : 'anon';
 
-            // Clean data logic (if conditional wasn't met, delete data)
+            // Clean data logic
             if(data.q5 !== 'Yes') delete data.q6;
             if(data.q11 !== 'Yes') delete data.q12;
             if(data.q17 !== 'Yes') delete data.q17_leakCount;
@@ -791,7 +795,7 @@
                     if(successScreen) successScreen.classList.add('hidden');
                     window.resetFormInternal();
                     showAuditDetail(docId, data);
-                    editModeId = null; // clear edit mode
+                    editModeId = null; 
                 }, 1500);
             } catch(err) { 
                 window.showAlert("Submission failed. Check database rules.", "Error", "error"); 
@@ -923,14 +927,12 @@
         function generateRecommendations(s) {
             const improve = []; const good = [];
 
-            // Daily Usage Check (Benchmark: 135 LPCD)
             if (s.q26 && s.membersCount) {
                 const perCapita = Math.round(parseInt(s.q26) / parseInt(s.membersCount));
                 if (perCapita > 135) improve.push({ title: "High Water Usage", mal: "പ്രതിശീർഷ ജല ഉപയോഗം 135 ലിറ്ററിൽ കൂടുതലാണ്. ഉപയോഗം കുറയ്ക്കുക.", eng: `Usage is ${perCapita}L/person (Standard is 135L).` });
                 else good.push({ title: "Optimal Usage", mal: "ജല ഉപയോഗം നിയന്ത്രിതമാണ്.", eng: `Usage is ${perCapita}L/person, well within standards.` });
             }
 
-            // Storage & Hygiene
             if (s.q5 === 'Yes' && s.q6 === 'No (Overflows)') improve.push({ title: "Install Tank Alarm", mal: "വാട്ടർ ലെവൽ അലാറം സ്ഥാപിക്കുക.", eng: "Prevent tank overflows by installing an auto cut-off switch." });
             else if (s.q6 === 'Yes, installed') good.push({ title: "Smart Storage", mal: "അലാറം ഉപയോഗിക്കുന്നത് വളരെ നല്ല ശീലമാണ്.", eng: "Overflow alarm prevents massive water wastage." });
 
@@ -940,16 +942,13 @@
             if (s.q8 === 'Always' || s.q8 === 'Sometimes') improve.push({ title: "Close Taps While Brushing", mal: "പല്ല് തേക്കുമ്പോഴും മുഖം കഴുകുമ്പോഴും ടാപ്പ് അടച്ചുവെക്കുക.", eng: "A running tap wastes up to 6 liters of water every minute." });
             if (s.q23 === 'No' || s.q23 === "Don't Know") improve.push({ title: "Install Aerators", mal: "ടാപ്പുകളിൽ വാട്ടർ എയറേറ്ററുകൾ ഘടിപ്പിക്കുക.", eng: "Water-saving aerators reduce tap flow by up to 50%." });
 
-            // Kitchen
             if (s.q9 === 'Under Running Tap') improve.push({ title: "Basin Dishwashing", mal: "പാത്രങ്ങൾ ഒരു ബേസിനിൽ വെള്ളം എടുത്ത് കഴുകുക.", eng: "Using a wash basin for dishes reduces kitchen water use." });
             if (s.q11 === 'Yes' && s.q12 === 'Wasted / Drained') improve.push({ title: "RO Water Recovery", mal: "RO പ്യൂരിഫയറിൽ നിന്നുള്ള പാഴ്ജലം ശേഖരിച്ച് ഉപയോഗിക്കുക.", eng: "Reuse RO reject water for cleaning floors or flushing." });
 
-            // Outdoor & Agriculture
             if (s.q14 === 'Hose Pipe') improve.push({ title: "Bucket Car Wash", mal: "വാഹനങ്ങൾ കഴുകാൻ ബക്കറ്റും സ്പോഞ്ചും ഉപയോഗിക്കുക.", eng: "A bucket wash saves hundreds of liters compared to a hose." });
             if (s.q15 === 'Hose Washing') improve.push({ title: "Sweep Floors", mal: "മുറ്റം ഹോസ് ഉപയോഗിച്ച് കഴുകാതെ അടിച്ചു വാരി വൃത്തിയാക്കുക.", eng: "Sweep yards instead of washing them down with a hose." });
             if (s.q24 === 'Yes' && s.q25 === 'No') improve.push({ title: "Kitchen Water for Garden", mal: "അടുക്കളയിലെ പാഴ്ജലം കൃഷിക്ക് ഉപയോഗിക്കുക.", eng: "Divert nutrient-rich kitchen greywater to your plants." });
 
-            // Leaks & Harvest
             if (s.q17 === 'Yes' || s.q18 === 'Yes') improve.push({ title: "Plumbing Repairs", mal: "ചോർച്ചയുള്ള ടാപ്പുകളും പൈപ്പുകളും എത്രയും പെട്ടെന്ന് നന്നാക്കുക.", eng: "Fix plumbing leaks immediately to prevent continuous loss." });
             if (s.q20 === 'No') improve.push({ title: "Rainwater Harvesting", mal: "മഴവെള്ള സംഭരണി സജ്ജീകരിക്കുക.", eng: "Set up a rainwater harvesting system or recharge pits." });
             else if (s.q20 === 'Yes') good.push({ title: "Groundwater Hero", mal: "മഴവെള്ള സംഭരണി ഉപയോഗിക്കുന്നത് മാതൃകാപരമാണ്.", eng: "Rainwater harvesting is vital for recharging groundwater." });
@@ -958,80 +957,76 @@
         }
 
         function getReportHTML(s, excludeRecommendations = false) {
-            const row = (l, v) => `<div class="flex justify-between items-center py-3 print:py-[2px] border-b border-slate-100 print:border-slate-200"><span class="text-[10px] print:text-[7px] text-slate-500 print:text-slate-600 font-bold uppercase tracking-wider w-[55%] pr-1 leading-tight">${l}</span><span class="text-sm print:text-[8px] font-black text-slate-800 text-right w-[45%] break-words leading-tight">${v||'—'}</span></div>`;
-            const head = (l) => `<h4 class="text-[10px] print:text-[8px] font-black text-blue-600 uppercase tracking-[0.2em] mt-6 print:mt-1.5 mb-2 print:mb-1 border-l-4 print:border-l-[3px] border-blue-500 pl-2 bg-blue-50/50 print:bg-transparent py-1 print:py-0 leading-tight">${l}</h4>`;
+            const row = (l, v, isLast = false) => `<div class="flex justify-between items-center py-2.5 print:py-[5.5px] ${isLast ? '' : 'border-b border-slate-200'}"><span class="text-[10px] print:text-[8px] text-slate-500 font-bold uppercase tracking-wider w-[55%] pr-2 leading-snug">${l}</span><span class="text-sm print:text-[9.5px] font-black text-slate-800 text-right w-[45%] break-words leading-snug">${v||'—'}</span></div>`;
+            const head = (l) => `<h4 class="text-xs print:text-[9px] font-black text-white bg-blue-700 uppercase tracking-widest mt-5 print:mt-3 px-4 print:px-3 py-2 print:py-1.5 rounded-t-xl">${l}</h4>`;
             
             return `
-                <div class="p-6 sm:p-10 print:p-2 bg-white page-break border-b-[16px] print:border-none border-slate-100 w-full box-border relative print:min-h-0" style="height: auto; min-height: 100vh;">
+                <div class="p-6 print:p-0 bg-white page-break w-full box-border flex flex-col relative print:h-[277mm] print:w-[190mm] mx-auto print:shadow-none print:border-none border-b-[16px] border-slate-100 min-h-[100vh]">
                     <!-- Header -->
-                    <div class="flex justify-between items-center mb-8 print:mb-2 border-b-2 border-slate-900 pb-6 print:pb-2">
-                        <img src="nss_logo.png" class="h-10 sm:h-12 print:h-10" onerror="this.style.display='none'">
-                        <div class="text-center px-2 w-full">
-                            <h2 class="text-xs print:text-[12px] font-black tracking-widest text-slate-900 uppercase leading-tight">Household Water Audit Survey</h2>
-                            <p class="text-[10px] print:text-[9px] font-extrabold text-slate-800 mt-1 print:mt-0.5">Mahatma Gandhi College, Iritty</p>
-                            <p class="text-[8px] print:text-[7px] font-bold text-slate-600 mt-0.5">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
-                            <p class="text-[8px] print:text-[7px] font-bold text-slate-500 uppercase mt-0.5">NSS Units 63 & 30</p>
-                            <p class="text-[7px] print:text-[6px] font-bold text-blue-500 mt-1 print:mt-0.5 tracking-wider">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
+                    <div class="flex justify-between items-center mb-4 border-b-2 border-slate-900 pb-4 print:pb-3">
+                        <img src="nss_logo.png" class="h-16 w-16 print:h-14 print:w-14 object-contain" onerror="this.style.display='none'">
+                        <div class="text-center px-4 flex-grow">
+                            <h2 class="text-lg sm:text-xl print:text-base font-black tracking-widest text-slate-900 uppercase leading-tight">Household Water Audit Survey</h2>
+                            <p class="text-sm print:text-[11px] font-extrabold text-slate-800 mt-1">Mahatma Gandhi College, Iritty</p>
+                            <p class="text-[9px] print:text-[8px] font-bold text-slate-600 mt-0.5">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
+                            <p class="text-[10px] print:text-[8.5px] font-bold text-slate-500 uppercase mt-1">NSS Units 63 & 30</p>
+                            <p class="text-[9px] print:text-[7.5px] font-bold text-blue-600 mt-1.5 tracking-wider">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
                         </div>
-                        <img src="college_logo.png" class="h-10 sm:h-12 print:h-10" onerror="this.style.display='none'">
+                        <img src="college_logo.png" class="h-16 w-16 print:h-14 print:w-14 object-contain" onerror="this.style.display='none'">
                     </div>
                     
-                    <!-- Household Info -->
-                    <div class="bg-slate-50 print:bg-white p-6 print:p-0 rounded-[28px] print:rounded-none mb-6 print:mb-2 border border-slate-100 print:border-none">
-                        <div class="mb-4 print:mb-1 flex justify-between items-end print:border-b print:border-slate-300 print:pb-1">
-                            <div>
-                                <p class="text-[9px] print:text-[6px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1 print:mb-0">Head of Household</p>
-                                <p class="text-xl print:text-[11px] font-black text-slate-900 leading-none">${s.headName}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[9px] print:text-[6px] font-black text-slate-400 uppercase tracking-widest mb-1 print:mb-0">Survey Date</p>
-                                <p class="text-sm print:text-[8px] font-bold text-slate-800">${s.date || '—'}</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 print:gap-2 border-t print:border-none border-slate-200 pt-4 print:pt-1">
-                            <div><p class="text-[8px] print:text-[6px] font-black text-slate-400 uppercase tracking-widest">House ID</p><p class="text-sm print:text-[8px] font-bold text-slate-800 mt-0.5">${s.houseNo}</p></div>
-                            <div><p class="text-[8px] print:text-[6px] font-black text-slate-400 uppercase tracking-widest">Ward No</p><p class="text-sm print:text-[8px] font-bold text-slate-800 mt-0.5">${s.wardNo}</p></div>
-                        </div>
+                    <!-- Household Info Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-4 print:gap-3 bg-slate-50 print:bg-slate-100 p-4 print:p-3 rounded-2xl border border-slate-200 mb-4 print:mb-2">
+                        <div class="col-span-2 sm:col-span-1 print:col-span-1"><p class="text-[9px] print:text-[7.5px] font-black text-blue-600 uppercase tracking-widest mb-1">Head of Household</p><p class="text-base print:text-sm font-black text-slate-900 leading-tight">${s.headName}</p></div>
+                        <div class="col-span-2 sm:col-span-1 print:col-span-1"><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">Survey Date</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.date || '—'}</p></div>
+                        <div><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">House ID</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.houseNo}</p></div>
+                        <div><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">Ward No</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.wardNo}</p></div>
                     </div>
 
                     <!-- Main Data Grid -->
-                    <div class="space-y-1 print:space-y-0 px-2 print:px-0">
-                        <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-8 print:gap-x-4 gap-y-0">
-                            <!-- Column 1 -->
-                            <div>
-                                ${head('General & Climate')}
+                    <div class="grid grid-cols-1 print:grid-cols-2 sm:grid-cols-2 gap-x-6 print:gap-x-8 gap-y-0 flex-grow">
+                        <!-- Column 1 -->
+                        <div>
+                            ${head('General & Climate')}
+                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
                                 ${row('Est. Daily Usage', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
                                 ${row('Per Capita Usage', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' L/Person' : '—')}
                                 ${row('Water Source', s.q4)}
                                 ${row('Summer Scarcity', s.q22)}
                                 ${row('Garden/Agriculture', s.q24)}
-                                ${row('Kitchen Water Reuse', s.q25)}
-                                
-                                ${head('Kitchen & Laundry')}
+                                ${row('Kitchen Water Reuse', s.q25, true)}
+                            </div>
+                            
+                            ${head('Kitchen & Laundry')}
+                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
                                 ${row('Dish Washing', s.q9)}
                                 ${row('Veggie Washing', s.q10)}
                                 ${row('RO Purifier', s.q11)}
                                 ${row('RO Waste Reuse', s.q12)}
-                                ${row('Laundry Load', s.q13)}
+                                ${row('Laundry Load', s.q13, true)}
                             </div>
-                            
-                            <!-- Column 2 -->
-                            <div>
-                                ${head('Storage & Hygiene')}
+                        </div>
+                        
+                        <!-- Column 2 -->
+                        <div>
+                            ${head('Storage & Hygiene')}
+                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
                                 ${row('Storage Tank', s.q5)}
                                 ${row('Tank Alarm', s.q6)}
                                 ${row('Bathing Style', s.q7)}
                                 ${row('Tap Discipline', s.q8)}
-                                ${row('Water-Saving Taps', s.q23)}
-                                
-                                ${head('Outdoor & Leaks')}
+                                ${row('Water-Saving Taps', s.q23, true)}
+                            </div>
+                            
+                            ${head('Outdoor & Leaks')}
+                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
                                 ${row('Vehicle Wash', s.q14)}
                                 ${row('Yard Cleaning', s.q15)}
                                 ${row('Watering Time', s.q16)}
                                 ${row('Active Tap Leaks', s.q17 === 'Yes' ? `Yes (${s.q17_leakCount} spots)` : 'No')}
                                 ${row('Flush Leaks', s.q18)}
                                 ${row('Jal Mahotsav Aware', s.q19)}
-                                ${row('Rain Harvest', s.q20)}
+                                ${row('Rain Harvest', s.q20, true)}
                             </div>
                         </div>
                     </div>
@@ -1039,31 +1034,29 @@
                     ${excludeRecommendations ? '' : (() => {
                         const r = generateRecommendations(s);
                         return `
-                        <div class="mt-6 mb-8 print:hidden">
-                            ${head('Personalized Audit Suggestions')}
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                                <div class="bg-orange-50/50 p-4 rounded-[20px] border border-orange-100">
-                                    <p class="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i> Areas for Improvement</p>
-                                    <div class="space-y-3">
+                        <div class="mt-4 mb-4 page-break-inside-avoid print:hidden">
+                            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 border-l-4 border-slate-800 pl-2">Personalized Audit Suggestions</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                                    <p class="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i> Areas for Improvement</p>
+                                    <div class="space-y-2.5">
                                         ${r.improve.length > 0 ? r.improve.map(item => `
                                             <div>
-                                                <p class="text-xs font-bold text-slate-800">${item.title}</p>
-                                                <p class="text-[10px] font-bold text-orange-600 mt-0.5 leading-snug">${item.mal}</p>
-                                                <p class="text-[8.5px] text-slate-500 mt-0.5 italic leading-tight">${item.eng}</p>
+                                                <p class="text-[11px] font-bold text-slate-800 leading-tight">${item.title}</p>
+                                                <p class="text-[9px] font-bold text-orange-600 mt-0.5 leading-snug">${item.mal}</p>
                                             </div>
-                                        `).join('<div class="h-px bg-orange-200/50 my-2"></div>') : '<p class="text-[10px] text-slate-500 italic">Excellent! No major improvements needed.</p>'}
+                                        `).join('<div class="h-px bg-orange-200/50 my-1.5"></div>') : '<p class="text-[10px] text-slate-500 italic">Excellent! No major improvements needed.</p>'}
                                     </div>
                                 </div>
-                                <div class="bg-emerald-50/50 p-4 rounded-[20px] border border-emerald-100">
-                                    <p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-thumbs-up"></i> Best Practices</p>
-                                    <div class="space-y-3">
+                                <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                    <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fa-solid fa-thumbs-up"></i> Best Practices</p>
+                                    <div class="space-y-2.5">
                                         ${r.good.length > 0 ? r.good.map(item => `
                                             <div>
-                                                <p class="text-xs font-bold text-slate-800">${item.title}</p>
-                                                <p class="text-[10px] font-bold text-emerald-600 mt-0.5 leading-snug">${item.mal}</p>
-                                                <p class="text-[8.5px] text-slate-500 mt-0.5 italic leading-tight">${item.eng}</p>
+                                                <p class="text-[11px] font-bold text-slate-800 leading-tight">${item.title}</p>
+                                                <p class="text-[9px] font-bold text-emerald-600 mt-0.5 leading-snug">${item.mal}</p>
                                             </div>
-                                        `).join('<div class="h-px bg-emerald-200/50 my-2"></div>') : '<p class="text-[10px] text-slate-500 italic">No specific best practices recorded.</p>'}
+                                        `).join('<div class="h-px bg-emerald-200/50 my-1.5"></div>') : '<p class="text-[10px] text-slate-500 italic">No specific best practices recorded.</p>'}
                                     </div>
                                 </div>
                             </div>
@@ -1071,26 +1064,20 @@
                         `;
                     })()}
 
-                    <!-- Pledge & Footer (Absolute bottom for print) -->
-                    <div class="mt-8 print:mt-4">
-                        <div class="bg-slate-900 print:bg-white p-8 print:p-3 rounded-[32px] print:rounded-lg text-white print:text-slate-900 text-center shadow-2xl print:shadow-none print:border print:border-slate-300 relative overflow-hidden">
-                            <i class="fa-solid fa-certificate absolute -right-4 -bottom-4 text-white/5 print:text-slate-50 text-7xl print:text-4xl"></i>
-                            <div class="relative z-10 flex flex-col items-center justify-center">
-                                <div class="w-12 h-12 print:w-6 print:h-6 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 print:mb-1 backdrop-blur-sm print:bg-slate-100">
-                                    <i class="fa-solid fa-leaf text-emerald-400 print:text-emerald-600 print:text-[10px]"></i>
-                                </div>
-                                <h4 class="text-lg print:text-[10px] font-black uppercase tracking-tight text-emerald-300 print:text-emerald-700 mb-1 print:mb-0 leading-none">${s.pledge}</h4>
-                                <p class="text-[9px] print:text-[6px] font-bold uppercase tracking-widest opacity-50 print:opacity-100 print:text-slate-500">Official Declaration</p>
-                            </div>
+                    <!-- Pledge & Footer (Pushed to bottom via mt-auto) -->
+                    <div class="mt-auto pt-4 print:pt-2 page-break-inside-avoid">
+                        <div class="bg-emerald-50 print:bg-white border-2 border-emerald-200 print:border-slate-300 p-4 print:p-3 rounded-2xl print:rounded-xl text-center mb-6 print:mb-4">
+                            <h4 class="text-base print:text-[13px] font-black uppercase tracking-tight text-emerald-700 print:text-slate-800 mb-1">${s.pledge}</h4>
+                            <p class="text-[9px] print:text-[7.5px] font-bold uppercase tracking-widest text-emerald-600/70 print:text-slate-500">Official Declaration of Water Conservation</p>
                         </div>
 
-                        <div class="mt-10 print:mt-3 pt-8 print:pt-2 flex justify-between items-end border-t border-slate-100 print:border-slate-300 px-2 print:px-0">
+                        <div class="flex justify-between items-end border-t-2 border-slate-200 pt-6 print:pt-4 px-4 print:px-2">
                             <div class="text-left">
-                                <p class="text-xs print:text-[8px] font-black text-slate-900 uppercase tracking-wider">${s.volunteerName}</p>
-                                <p class="text-[8px] print:text-[6px] font-bold text-slate-400 uppercase tracking-widest mt-1 print:mt-0">Volunteer Signature</p>
+                                <p class="text-sm print:text-xs font-black text-slate-900 uppercase tracking-wider">${s.volunteerName}</p>
+                                <p class="text-[10px] print:text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Volunteer Signature</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-[10px] print:text-[7px] font-black text-slate-300 print:text-slate-500 uppercase tracking-widest">Jal Mahotsav</p>
+                                <p class="text-[10px] print:text-[8px] font-black text-slate-400 uppercase tracking-widest">Jal Mahotsav</p>
                             </div>
                         </div>
                     </div>
