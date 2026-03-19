@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         
         :root {
             --brand-blue: #2563eb;
@@ -71,7 +71,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Highly Optimized Printing Adjustments to force 1 Page per Household */
+        /* Highly Optimized Printing Adjustments - Forced 1 Page per Household A4 */
         @media print {
             .print-hidden { display: none !important; }
             body { 
@@ -80,11 +80,28 @@
                 margin: 0 !important; 
                 height: auto !important; 
                 overflow: visible !important; 
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact; 
             }
-            .page-break { page-break-after: always; break-after: page; }
-            .page-break:last-child { page-break-after: auto; break-after: auto; }
+            .print-exact-color {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .a4-print-container {
+                width: 100% !important;
+                height: 277mm !important; /* Exact A4 inner height lock */
+                max-height: 277mm !important;
+                overflow: hidden !important;
+                page-break-after: always;
+                box-sizing: border-box;
+                padding: 5mm !important;
+                margin: 0 auto !important;
+                border: none !important;
+                box-shadow: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .a4-print-container:last-child {
+                page-break-after: auto;
+            }
             @page { size: A4 portrait; margin: 10mm; }
         }
     </style>
@@ -141,10 +158,10 @@
     </header>
 
     <!-- Main App Content -->
-    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full">
+    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full print:p-0 print:m-0 print:block">
         
         <!-- DASHBOARD VIEW -->
-        <div id="view-dashboard" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view">
+        <div id="view-dashboard" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view print-hidden">
             
             <!-- Quick Summary Card -->
             <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden">
@@ -186,10 +203,10 @@
                     <div class="w-10 h-10 bg-purple-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-purple-200"><i class="fa-solid fa-file-code"></i></div>
                     <div class="text-left"><p class="text-sm font-extrabold text-purple-900">JSON Data</p><p class="text-[9px] font-bold text-purple-600 uppercase">Raw Export</p></div>
                 </button>
-                <!-- NEW: PDF Export Button (Admin Only) -->
+                <!-- Admin Batch PDF Export -->
                 <button id="admin-export-pdf-btn" onclick="exportPDF()" class="hidden snap-start shrink-0 w-36 bg-rose-50 border border-rose-100 p-4 rounded-[24px] flex-col items-start gap-3 active:scale-95 transition shadow-sm">
-                    <div class="w-10 h-10 bg-rose-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-rose-200"><i class="fa-solid fa-file-pdf"></i></div>
-                    <div class="text-left"><p class="text-sm font-extrabold text-rose-900">Batch PDF</p><p class="text-[9px] font-bold text-rose-600 uppercase">All Reports</p></div>
+                    <div class="w-10 h-10 bg-rose-600 text-white rounded-[14px] flex items-center justify-center shadow-md shadow-rose-200"><i class="fa-solid fa-print"></i></div>
+                    <div class="text-left"><p class="text-sm font-extrabold text-rose-900">Batch PDF</p><p class="text-[9px] font-bold text-rose-600 uppercase">Print All Audits</p></div>
                 </button>
                 <button onclick="copyAppLink()" class="snap-start shrink-0 w-36 bg-slate-50 border border-slate-200 p-4 rounded-[24px] flex flex-col items-start gap-3 active:scale-95 transition shadow-sm">
                     <div class="w-10 h-10 bg-slate-800 text-white rounded-[14px] flex items-center justify-center shadow-md"><i class="fa-solid fa-share-nodes"></i></div>
@@ -263,8 +280,7 @@
         </div>
 
         <!-- FORM VIEW -->
-        <div id="view-form" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view">
-            
+        <div id="view-form" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view print-hidden">
             <!-- Success Overlay -->
             <div id="success-screen" class="hidden fixed inset-0 bg-blue-600/98 backdrop-blur-2xl z-[100] flex flex-col items-center justify-center text-white p-10">
                 <div class="w-24 h-24 bg-white/10 rounded-[32px] flex items-center justify-center mb-6 animate-bounce shadow-2xl">
@@ -316,8 +332,8 @@
             </form>
         </div>
 
-        <!-- REPORT VIEW -->
-        <div id="view-report" class="hidden max-w-xl mx-auto p-4 animate-view print:p-0 pb-10 print:max-w-none print:w-full">
+        <!-- REPORT VIEW (Where the PDF generates) -->
+        <div id="view-report" class="hidden max-w-xl print:max-w-none print:w-full mx-auto p-4 animate-view print:p-0 pb-10 print:pb-0">
             <div class="flex items-center justify-between mb-6 print-hidden">
                 <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 active:scale-90 transition">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -326,17 +342,18 @@
                     <i class="fa-solid fa-print text-sm"></i> Print PDF
                 </button>
             </div>
-            <div id="report-canvas" class="bg-transparent report-card"></div>
+            <!-- The canvas where the A4 print containers are injected -->
+            <div id="report-canvas" class="bg-transparent report-card w-full"></div>
         </div>
 
         <!-- INFO VIEW -->
-        <div id="view-info" class="hidden px-4 py-6 max-w-xl mx-auto animate-view">
+        <div id="view-info" class="hidden px-4 py-6 max-w-xl mx-auto animate-view print-hidden">
             <div class="bg-white rounded-[32px] p-8 text-center shadow-sm border border-slate-100 mt-4">
                 <div class="w-24 h-24 bg-blue-50 text-blue-600 rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-inner border border-blue-100">
                     <i class="fa-solid fa-circle-info text-4xl"></i>
                 </div>
                 <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">Water Audit App</h2>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 4.0</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 5.0</p>
                 
                 <div class="space-y-4 text-left bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-8">
                     <div class="flex items-center gap-4">
@@ -440,13 +457,11 @@
 
         let currentUser = null;
         let surveys = [];
-        let isAdmin = false; // Global admin state
-        let editModeId = null; // Track if we are editing an existing survey
+        let isAdmin = false; 
+        let editModeId = null;
 
-        // Haptic Feedback Helper
         const triggerHaptic = () => { if (window.navigator.vibrate) window.navigator.vibrate(10); };
 
-        // Custom Modal UI
         window.showAlert = (msg, title="Notification", type="info") => {
             document.getElementById('custom-alert-title').innerText = title;
             document.getElementById('custom-alert-msg').innerText = msg;
@@ -476,7 +491,6 @@
         };
         window.closeCustomConfirm = () => document.getElementById('custom-confirm').classList.add('hidden');
 
-        // Network Status Listener
         const updateNetworkStatus = () => {
             const badge = document.getElementById('network-badge');
             const dot = document.getElementById('network-dot');
@@ -494,7 +508,6 @@
         window.addEventListener('online', updateNetworkStatus);
         window.addEventListener('offline', updateNetworkStatus);
 
-        // App Navigation Controller
         window.switchTab = (tab) => {
             triggerHaptic();
             document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
@@ -502,7 +515,6 @@
             const el = document.getElementById(target);
             if(el) el.classList.remove('hidden');
 
-            // Nav States
             const btns = { 
                 dashboard: document.getElementById('nav-btn-dashboard'), 
                 form: document.getElementById('nav-btn-form'),
@@ -524,7 +536,6 @@
             document.getElementById('main-scroll').scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // Data Sync Initialization
         async function startApp() {
             updateNetworkStatus();
             try {
@@ -543,14 +554,12 @@
                     loader.classList.add('opacity-0');
                     setTimeout(() => loader.classList.add('hidden'), 700);
                 }
-                // Only re-render dashboard if we are not currently editing a form to prevent losing data
                 if(!editModeId) {
                     renderDashboard();
                 }
             });
         }
 
-        // Admin Toggle
         window.toggleAdminMode = () => {
             triggerHaptic();
             if (isAdmin) {
@@ -559,9 +568,8 @@
                 window.showAlert("Admin mode disabled. You can no longer edit or delete records.", "Admin Mode", "info");
                 renderDashboard();
             } else {
-                // Simple PIN protection for admin mode
                 const pin = prompt("Enter Admin PIN:");
-                if (pin === "6330") { // Using NSS Unit numbers as default PIN
+                if (pin === "6330") {
                     isAdmin = true;
                     document.getElementById('admin-btn-text').innerText = "Disable Admin Mode";
                     window.showAlert("Admin mode enabled. You can now edit, delete records, and Batch Print.", "Admin Mode", "success");
@@ -620,27 +628,23 @@
                 if(sourceMap[s.q4] !== undefined) sourceMap[s.q4]++;
             });
 
-            // Summary Texts
             ['total', 'members', 'pledges', 'leaks'].forEach(k => {
                 const el = document.getElementById(`stat-${k}`);
                 if(el) el.innerText = stats[k];
             });
 
-            // Climate & Ag Metrics
             const scarcityEl = document.getElementById('stat-scarcity');
             if(scarcityEl) scarcityEl.innerText = Math.round((stats.scarcityCount/(stats.total||1))*100) + '%';
             
             const reuseEl = document.getElementById('stat-reuse');
             if(reuseEl) reuseEl.innerText = Math.round((stats.reuseCount/(stats.total||1))*100) + '%';
 
-            // Water Consumption Metrics
             const avgUsageEl = document.getElementById('stat-avg-usage');
             if(avgUsageEl) avgUsageEl.innerText = stats.validUsageEntries ? Math.round(stats.totalWaterUsage / stats.validUsageEntries) : 0;
             
             const perCapitaEl = document.getElementById('stat-per-capita');
             if(perCapitaEl) perCapitaEl.innerText = stats.membersWithUsageData ? Math.round(stats.totalWaterUsage / stats.membersWithUsageData) : 0;
 
-            // Progress Bars - Risks
             const riskContainer = document.getElementById('risk-bars');
             if(riskContainer) {
                 const risks = [
@@ -663,7 +667,6 @@
                 `).join('');
             }
 
-            // Progress Bars - Sources
             const sourceContainer = document.getElementById('source-bars');
             if(sourceContainer) {
                 sourceContainer.innerHTML = Object.entries(sourceMap).map(([label, count]) => `
@@ -679,7 +682,6 @@
                 `).join('');
             }
 
-            // List Cards
             const listEl = document.getElementById('audit-list');
             if(listEl) {
                 listEl.innerHTML = filtered.map(s => `
@@ -710,7 +712,6 @@
             }
         }
 
-        // Admin Edit & Delete Functions
         window.deleteSurveyFn = (id) => {
             triggerHaptic();
             window.showConfirm("Are you sure you want to permanently delete this audit record?", async () => {
@@ -731,7 +732,6 @@
             editModeId = id;
             switchTab('form');
             
-            // Populate form
             const form = document.getElementById('auditForm');
             Object.keys(survey).forEach(key => {
                 const elements = form.elements[key];
@@ -750,13 +750,11 @@
                 }
             });
 
-            // Update submit button text
             const btn = form.querySelector('button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Update Audit Record';
             window.showAlert("Editing record. Make changes and submit to update.", "Edit Mode", "info");
         };
 
-        // Form Submission Logic
         document.getElementById('auditForm').onsubmit = async (e) => {
             e.preventDefault();
             triggerHaptic();
@@ -769,7 +767,6 @@
             const data = Object.fromEntries(new FormData(e.target).entries());
             data.submittedBy = currentUser ? currentUser.uid : 'anon';
 
-            // Clean data logic
             if(data.q5 !== 'Yes') delete data.q6;
             if(data.q11 !== 'Yes') delete data.q12;
             if(data.q17 !== 'Yes') delete data.q17_leakCount;
@@ -803,7 +800,6 @@
             }
         };
 
-        // UI Builders
         function buildMobileForm() {
             const q = [
                 { id: 'sec1', l: 'General Info & Infrastructure', qs: [
@@ -879,7 +875,6 @@
                     </div>
                 `).join('');
 
-                // Pledge Section
                 container.innerHTML += `
                     <div class="p-6 bg-emerald-50 rounded-[32px] border-2 border-emerald-100 text-center mt-6">
                         <div class="w-12 h-12 bg-white rounded-[16px] text-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-sm border border-emerald-100">
@@ -903,7 +898,6 @@
                     </div>
                 `;
 
-                // Conditional Logic Handler
                 document.getElementById('auditForm').addEventListener('change', (e) => {
                     const n = e.target.name;
                     const v = e.target.value;
@@ -923,7 +917,6 @@
             }
         }
 
-        // Global Helper for Report HTML (Used by Single View & Batch Print)
         function generateRecommendations(s) {
             const improve = []; const good = [];
 
@@ -956,85 +949,107 @@
             return { improve, good };
         }
 
-        function getReportHTML(s, excludeRecommendations = false) {
-            const row = (l, v, isLast = false) => `<div class="flex justify-between items-center py-2.5 print:py-[5.5px] ${isLast ? '' : 'border-b border-slate-200'}"><span class="text-[10px] print:text-[8px] text-slate-500 font-bold uppercase tracking-wider w-[55%] pr-2 leading-snug">${l}</span><span class="text-sm print:text-[9.5px] font-black text-slate-800 text-right w-[45%] break-words leading-snug">${v||'—'}</span></div>`;
-            const head = (l) => `<h4 class="text-xs print:text-[9px] font-black text-white bg-blue-700 uppercase tracking-widest mt-5 print:mt-3 px-4 print:px-3 py-2 print:py-1.5 rounded-t-xl">${l}</h4>`;
+        function getReportHTML(s, isBatchMode = false) {
+            const row = (l, v, isLast = false) => `
+                <div class="flex border-slate-300 print:border-slate-800 ${isLast ? '' : 'border-b'}">
+                    <div class="w-1/2 p-2 print:p-1.5 text-[11px] print:text-[10px] font-bold uppercase text-slate-600 print:text-slate-800 border-r border-slate-300 print:border-slate-800 bg-slate-50 print:bg-transparent flex items-center print-exact-color">${l}</div>
+                    <div class="w-1/2 p-2 print:p-1.5 text-[12px] print:text-[11px] font-black text-slate-900 break-words flex items-center">${v||'—'}</div>
+                </div>`;
+                
+            const head = (l) => `
+                <h3 class="text-xs print:text-[11px] font-black text-white bg-blue-700 print:bg-slate-800 px-3 py-2 print:py-1.5 uppercase tracking-widest print-exact-color">${l}</h3>`;
             
             return `
-                <div class="p-6 print:p-0 bg-white page-break w-full box-border flex flex-col relative print:h-[277mm] print:w-[190mm] mx-auto print:shadow-none print:border-none border-b-[16px] border-slate-100 min-h-[100vh]">
+                <div class="p-6 print:p-0 bg-white w-full box-border flex flex-col relative a4-print-container page-break border-b-[16px] border-slate-100 print:border-none">
                     <!-- Header -->
-                    <div class="flex justify-between items-center mb-4 border-b-2 border-slate-900 pb-4 print:pb-3">
-                        <img src="nss_logo.png" class="h-16 w-16 print:h-14 print:w-14 object-contain" onerror="this.style.display='none'">
+                    <div class="flex justify-between items-center mb-6 print:mb-4 border-b-2 border-slate-900 pb-6 print:pb-4">
+                        <img src="nss_logo.png" class="h-16 w-16 print:h-[60px] print:w-[60px] object-contain" onerror="this.style.display='none'">
                         <div class="text-center px-4 flex-grow">
-                            <h2 class="text-lg sm:text-xl print:text-base font-black tracking-widest text-slate-900 uppercase leading-tight">Household Water Audit Survey</h2>
-                            <p class="text-sm print:text-[11px] font-extrabold text-slate-800 mt-1">Mahatma Gandhi College, Iritty</p>
-                            <p class="text-[9px] print:text-[8px] font-bold text-slate-600 mt-0.5">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
-                            <p class="text-[10px] print:text-[8.5px] font-bold text-slate-500 uppercase mt-1">NSS Units 63 & 30</p>
-                            <p class="text-[9px] print:text-[7.5px] font-bold text-blue-600 mt-1.5 tracking-wider">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
+                            <h2 class="text-xl print:text-[16px] font-black tracking-widest text-slate-900 uppercase leading-tight">HOUSEHOLD WATER AUDIT SURVEY</h2>
+                            <p class="text-sm print:text-[12px] font-extrabold text-slate-800 mt-2 print:mt-1">Mahatma Gandhi College, Iritty</p>
+                            <p class="text-[10px] print:text-[9px] font-bold text-slate-600 mt-0.5">Reaccredited by NAAC with A Grade (CGPA 3.22)</p>
+                            <p class="text-[11px] print:text-[10px] font-bold text-slate-800 uppercase mt-1">NSS UNITS 63 & 30</p>
+                            <p class="text-[9px] print:text-[8px] font-bold text-blue-600 mt-1.5 tracking-wider">#JalMahotsav2026 &nbsp; #JalArpanDiwas &nbsp; #HarGharJal</p>
                         </div>
-                        <img src="college_logo.png" class="h-16 w-16 print:h-14 print:w-14 object-contain" onerror="this.style.display='none'">
+                        <img src="college_logo.png" class="h-16 w-16 print:h-[60px] print:w-[60px] object-contain" onerror="this.style.display='none'">
                     </div>
                     
-                    <!-- Household Info Grid -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 print:grid-cols-4 gap-4 print:gap-3 bg-slate-50 print:bg-slate-100 p-4 print:p-3 rounded-2xl border border-slate-200 mb-4 print:mb-2">
-                        <div class="col-span-2 sm:col-span-1 print:col-span-1"><p class="text-[9px] print:text-[7.5px] font-black text-blue-600 uppercase tracking-widest mb-1">Head of Household</p><p class="text-base print:text-sm font-black text-slate-900 leading-tight">${s.headName}</p></div>
-                        <div class="col-span-2 sm:col-span-1 print:col-span-1"><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">Survey Date</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.date || '—'}</p></div>
-                        <div><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">House ID</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.houseNo}</p></div>
-                        <div><p class="text-[9px] print:text-[7.5px] font-black text-slate-500 uppercase tracking-widest mb-1">Ward No</p><p class="text-sm print:text-xs font-bold text-slate-800">${s.wardNo}</p></div>
+                    <!-- Household Info Metadata -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 print:grid-cols-2 gap-4 print:gap-x-12 mb-6 print:mb-4">
+                        <div>
+                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1 mb-2">
+                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">SURVEY DATE</div>
+                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.date || '—'}</div>
+                            </div>
+                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1">
+                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">HEAD OF HOUSEHOLD</div>
+                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.headName}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1 mb-2">
+                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">HOUSE ID</div>
+                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.houseNo}</div>
+                            </div>
+                            <div class="flex border-b border-slate-300 print:border-slate-800 pb-1">
+                                <div class="w-2/5 text-[10px] print:text-[9px] font-bold uppercase text-slate-600 print:text-slate-800 flex items-center">WARD NO</div>
+                                <div class="w-3/5 text-sm print:text-[11px] font-black text-slate-900">${s.wardNo}</div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Main Data Grid -->
-                    <div class="grid grid-cols-1 print:grid-cols-2 sm:grid-cols-2 gap-x-6 print:gap-x-8 gap-y-0 flex-grow">
+                    <div class="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-x-6 print:gap-x-10 gap-y-4 print:gap-y-4 flex-grow">
                         <!-- Column 1 -->
-                        <div>
-                            ${head('General & Climate')}
-                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
-                                ${row('Est. Daily Usage', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
-                                ${row('Per Capita Usage', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' L/Person' : '—')}
-                                ${row('Water Source', s.q4)}
-                                ${row('Summer Scarcity', s.q22)}
-                                ${row('Garden/Agriculture', s.q24)}
-                                ${row('Kitchen Water Reuse', s.q25, true)}
+                        <div class="flex flex-col gap-4 print:gap-3">
+                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                                ${head('GENERAL & CLIMATE')}
+                                ${row('EST. DAILY USAGE', s.q26 ? s.q26 + ' Liters' : 'Not Reported')}
+                                ${row('PER CAPITA USAGE', (s.q26 && s.membersCount) ? Math.round(parseInt(s.q26) / parseInt(s.membersCount)) + ' L/Person' : '—')}
+                                ${row('WATER SOURCE', s.q4)}
+                                ${row('SUMMER SCARCITY', s.q22)}
+                                ${row('GARDEN/AGRICULTURE', s.q24)}
+                                ${row('KITCHEN WATER REUSE', s.q25, true)}
                             </div>
                             
-                            ${head('Kitchen & Laundry')}
-                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
-                                ${row('Dish Washing', s.q9)}
-                                ${row('Veggie Washing', s.q10)}
-                                ${row('RO Purifier', s.q11)}
-                                ${row('RO Waste Reuse', s.q12)}
-                                ${row('Laundry Load', s.q13, true)}
+                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                                ${head('KITCHEN & LAUNDRY')}
+                                ${row('DISH WASHING', s.q9)}
+                                ${row('VEGGIE WASHING', s.q10)}
+                                ${row('RO PURIFIER', s.q11)}
+                                ${row('RO WASTE REUSE', s.q12)}
+                                ${row('LAUNDRY LOAD', s.q13, true)}
                             </div>
                         </div>
                         
                         <!-- Column 2 -->
-                        <div>
-                            ${head('Storage & Hygiene')}
-                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
-                                ${row('Storage Tank', s.q5)}
-                                ${row('Tank Alarm', s.q6)}
-                                ${row('Bathing Style', s.q7)}
-                                ${row('Tap Discipline', s.q8)}
-                                ${row('Water-Saving Taps', s.q23, true)}
+                        <div class="flex flex-col gap-4 print:gap-3">
+                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                                ${head('STORAGE & HYGIENE')}
+                                ${row('STORAGE TANK', s.q5)}
+                                ${row('TANK ALARM', s.q6)}
+                                ${row('BATHING STYLE', s.q7)}
+                                ${row('TAP DISCIPLINE', s.q8)}
+                                ${row('WATER-SAVING TAPS', s.q23, true)}
                             </div>
                             
-                            ${head('Outdoor & Leaks')}
-                            <div class="bg-slate-50 print:bg-white border border-slate-200 rounded-b-xl px-4 print:px-3 shadow-sm print:shadow-none mb-2">
-                                ${row('Vehicle Wash', s.q14)}
-                                ${row('Yard Cleaning', s.q15)}
-                                ${row('Watering Time', s.q16)}
-                                ${row('Active Tap Leaks', s.q17 === 'Yes' ? `Yes (${s.q17_leakCount} spots)` : 'No')}
-                                ${row('Flush Leaks', s.q18)}
-                                ${row('Jal Mahotsav Aware', s.q19)}
-                                ${row('Rain Harvest', s.q20, true)}
+                            <div class="print:break-inside-avoid border border-slate-300 print:border-slate-800 border-t-0 rounded-b-md print:rounded-none overflow-hidden">
+                                ${head('OUTDOOR & LEAKS')}
+                                ${row('VEHICLE WASH', s.q14)}
+                                ${row('YARD CLEANING', s.q15)}
+                                ${row('WATERING TIME', s.q16)}
+                                ${row('ACTIVE TAP LEAKS', s.q17 === 'Yes' ? `Yes (${s.q17_leakCount} spots)` : 'No')}
+                                ${row('FLUSH LEAKS', s.q18)}
+                                ${row('JAL MAHOTSAV AWARE', s.q19)}
+                                ${row('RAIN HARVEST', s.q20, true)}
                             </div>
                         </div>
                     </div>
 
-                    ${excludeRecommendations ? '' : (() => {
+                    ${isBatchMode ? '' : (() => {
                         const r = generateRecommendations(s);
                         return `
-                        <div class="mt-4 mb-4 page-break-inside-avoid print:hidden">
+                        <div class="mt-6 mb-4 print:hidden">
                             <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-3 border-l-4 border-slate-800 pl-2">Personalized Audit Suggestions</h4>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-100">
@@ -1064,20 +1079,20 @@
                         `;
                     })()}
 
-                    <!-- Pledge & Footer (Pushed to bottom via mt-auto) -->
-                    <div class="mt-auto pt-4 print:pt-2 page-break-inside-avoid">
-                        <div class="bg-emerald-50 print:bg-white border-2 border-emerald-200 print:border-slate-300 p-4 print:p-3 rounded-2xl print:rounded-xl text-center mb-6 print:mb-4">
-                            <h4 class="text-base print:text-[13px] font-black uppercase tracking-tight text-emerald-700 print:text-slate-800 mb-1">${s.pledge}</h4>
-                            <p class="text-[9px] print:text-[7.5px] font-bold uppercase tracking-widest text-emerald-600/70 print:text-slate-500">Official Declaration of Water Conservation</p>
+                    <!-- Pledge & Footer -->
+                    <div class="mt-auto pt-6 print:pt-4 page-break-inside-avoid w-full">
+                        <div class="bg-emerald-50 print:bg-emerald-100 print-exact-color border-2 border-emerald-200 print:border-emerald-600 p-4 print:p-4 rounded-2xl print:rounded-xl text-center mb-10 print:mb-8">
+                            <h4 class="text-base print:text-[14px] font-black uppercase tracking-tight text-emerald-700 print:text-emerald-900 mb-1 leading-none print:leading-tight">${s.pledge}</h4>
+                            <p class="text-[9px] print:text-[8px] font-bold uppercase tracking-widest text-emerald-600/70 print:text-emerald-800 mt-2">OFFICIAL DECLARATION OF WATER CONSERVATION</p>
                         </div>
 
-                        <div class="flex justify-between items-end border-t-2 border-slate-200 pt-6 print:pt-4 px-4 print:px-2">
+                        <div class="flex justify-between items-end pb-4 px-4 print:px-2">
                             <div class="text-left">
-                                <p class="text-sm print:text-xs font-black text-slate-900 uppercase tracking-wider">${s.volunteerName}</p>
-                                <p class="text-[10px] print:text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Volunteer Signature</p>
+                                <p class="text-sm print:text-xs font-black text-slate-900 uppercase tracking-wider mb-1">${s.volunteerName}</p>
+                                <p class="text-[10px] print:text-[8px] font-bold text-slate-500 uppercase tracking-widest border-t-2 border-slate-300 print:border-slate-800 pt-1 w-48">VOLUNTEER SIGNATURE</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-[10px] print:text-[8px] font-black text-slate-400 uppercase tracking-widest">Jal Mahotsav</p>
+                                <p class="text-base print:text-sm font-black text-slate-400 print:text-slate-800 uppercase tracking-widest">JAL MAHOTSAV</p>
                             </div>
                         </div>
                     </div>
@@ -1091,7 +1106,7 @@
             
             const canvas = document.getElementById('report-canvas');
             if(canvas) {
-                canvas.innerHTML = getReportHTML(s, false);
+                canvas.innerHTML = getReportHTML(s, false); // False = Single View mode, keep recommendations
                 switchTab('view');
             }
         };
@@ -1149,7 +1164,6 @@ _Generated via MG College NSS Water Audit System_`.trim();
             navigator.clipboard.writeText(window.location.href).then(() => window.showAlert("App link copied! Send it to other NSS volunteers.", "Link Copied!", "success"));
         };
 
-        // Map internal keys to friendly headers for Excel Export
         const exportHeaderMap = {
             date: "Date of Survey",
             volunteerName: "Volunteer Name",
@@ -1228,11 +1242,10 @@ _Generated via MG College NSS Water Audit System_`.trim();
             setTimeout(() => {
                 const canvas = document.getElementById('report-canvas');
                 if (canvas) {
-                    // Pass true to exclude recommendations for batch printing
+                    // True = Batch mode, strips out the recommendations entirely.
                     canvas.innerHTML = surveys.map(s => getReportHTML(s, true)).join('');
                     switchTab('view');
                     
-                    // Allow DOM to render images before triggering print
                     setTimeout(() => {
                         window.print();
                         window.closeCustomAlert();
@@ -1246,7 +1259,6 @@ _Generated via MG College NSS Water Audit System_`.trim();
             document.querySelectorAll('.radio-tile-group input:checked').forEach(i => i.checked = false);
             document.querySelectorAll('[data-parent]').forEach(el => el.classList.add('hidden'));
             
-            // Reset button text
             const btn = document.querySelector('#auditForm button[type="submit"]');
             if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-lg"></i> Push to Server';
             editModeId = null;
