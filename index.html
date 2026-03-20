@@ -19,6 +19,18 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         
+        /* ====================================================================
+           CRITICAL FAILSAFE CSS
+           These rules ensure the app doesn't break into "giant logos" or 
+           show all tabs at once if the Tailwind CDN script is blocked by 
+           AdBlockers or strict mobile browsers.
+           ==================================================================== */
+        .hidden { display: none !important; }
+        img { max-width: 100%; height: auto; }
+        .fallback-logo { width: 48px !important; height: 48px !important; max-width: 48px; max-height: 48px; object-fit: contain; }
+        .fallback-logo-sm { width: 36px !important; height: 36px !important; max-width: 36px; max-height: 36px; object-fit: contain; }
+        #loader { background-color: #2563eb; color: white; }
+        
         :root {
             --brand-blue: #2563eb;
             --safe-area-top: env(safe-area-inset-top, 0px);
@@ -71,22 +83,15 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Highly Optimized Printing Adjustments - Resolves "White Pages" issue */
+        /* Highly Optimized Printing Adjustments - Forced 1 Page per Household A4 */
         @media print {
             .print-hidden { display: none !important; }
-            html, body { 
+            body { 
                 background: white !important; 
                 padding: 0 !important; 
                 margin: 0 !important; 
                 height: auto !important; 
-                width: auto !important;
                 overflow: visible !important; 
-            }
-            main, #view-report, #report-canvas {
-                height: auto !important;
-                overflow: visible !important;
-                display: block !important;
-                position: relative !important;
             }
             .print-exact-color {
                 -webkit-print-color-adjust: exact !important;
@@ -94,13 +99,12 @@
             }
             .a4-print-container {
                 width: 100% !important;
-                height: auto !important; 
-                min-height: 100vh !important;
+                height: 277mm !important; /* Exact A4 inner height lock */
+                max-height: 277mm !important;
                 overflow: hidden !important;
                 page-break-after: always;
-                page-break-inside: avoid;
                 box-sizing: border-box;
-                padding: 10mm 15mm !important;
+                padding: 5mm !important;
                 margin: 0 auto !important;
                 border: none !important;
                 box-shadow: none !important;
@@ -110,7 +114,7 @@
             .a4-print-container:last-child {
                 page-break-after: auto;
             }
-            @page { size: A4 portrait; margin: 0; }
+            @page { size: A4 portrait; margin: 10mm; }
         }
     </style>
 
@@ -127,30 +131,30 @@
 <body class="flex flex-col text-slate-900 overflow-hidden">
 
     <!-- Native App Splash Screen -->
-    <div id="loader" class="fixed inset-0 bg-blue-600 z-[200] flex flex-col items-center justify-center p-10 transition-opacity duration-700 text-white">
+    <div id="loader" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-10 transition-opacity duration-700">
         <div class="flex items-center justify-center gap-4 mb-8">
             <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl">
-                <img src="nss_logo.png" onerror="this.src='https://via.placeholder.com/60?text=NSS'" class="w-12 h-12 object-contain">
+                <img src="nss_logo.png" width="48" height="48" onerror="this.src='https://via.placeholder.com/48?text=NSS'" class="fallback-logo">
             </div>
             <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl">
-                <img src="college_logo.png" onerror="this.src='https://via.placeholder.com/60?text=MGC'" class="w-12 h-12 object-contain">
+                <img src="college_logo.png" width="48" height="48" onerror="this.src='https://via.placeholder.com/48?text=MGC'" class="fallback-logo">
             </div>
         </div>
-        <h1 class="text-3xl font-black tracking-tighter mb-2 text-center">NSS WATER AUDIT</h1>
-        <p class="text-xs font-bold text-blue-200 tracking-widest uppercase mb-12 text-center">Mahatma Gandhi College</p>
+        <h1 class="text-3xl font-black tracking-tighter mb-2 text-center" style="color: white;">NSS WATER AUDIT</h1>
+        <p class="text-xs font-bold text-blue-200 tracking-widest uppercase mb-12 text-center" style="color: #bfdbfe;">Mahatma Gandhi College</p>
         
-        <div class="relative w-10 h-10">
-            <div class="absolute inset-0 border-4 border-white/20 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-white rounded-full border-t-transparent animate-spin"></div>
+        <div class="relative w-10 h-10" style="margin: 0 auto;">
+            <div class="absolute inset-0 border-4 border-white/20 rounded-full" style="border-color: rgba(255,255,255,0.2);"></div>
+            <div class="absolute inset-0 border-4 border-white rounded-full border-t-transparent animate-spin" style="border-color: white; border-top-color: transparent;"></div>
         </div>
-        <p class="mt-6 text-[10px] font-black text-blue-300 uppercase tracking-[0.3em] animate-pulse">Syncing Cloud Database</p>
+        <p class="mt-6 text-[10px] font-black text-blue-300 uppercase tracking-[0.3em] animate-pulse" style="color: #93c5fd; text-align: center;">Syncing Cloud Database</p>
     </div>
 
     <!-- Mobile Top Header -->
     <header class="fixed top-0 left-0 right-0 z-50 nav-blur border-b border-slate-100 safe-pt print-hidden">
         <div class="px-5 py-3 flex items-center justify-between max-w-xl mx-auto">
             <div class="flex items-center gap-3">
-                <img id="nss-logo-img" src="nss_logo.png" onerror="this.src='https://via.placeholder.com/40?text=NSS'" class="w-9 h-9 rounded-[10px] shadow-sm bg-white p-1">
+                <img id="nss-logo-img" src="nss_logo.png" width="36" height="36" onerror="this.src='https://via.placeholder.com/36?text=NSS'" class="fallback-logo-sm rounded-[10px] shadow-sm bg-white p-1">
                 <div>
                     <h1 class="text-xs font-black tracking-widest text-slate-800 leading-none uppercase">Water Audit</h1>
                     <p class="text-[9px] font-bold text-blue-600 mt-1 uppercase">Units 63 & 30</p>
@@ -166,7 +170,7 @@
     </header>
 
     <!-- Main App Content -->
-    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full print:h-auto print:overflow-visible print:block print:p-0 print:m-0">
+    <main id="main-scroll" class="flex-grow overflow-y-auto no-scrollbar header-spacing nav-spacing relative w-full h-full print:p-0 print:m-0 print:block">
         
         <!-- DASHBOARD VIEW -->
         <div id="view-dashboard" class="hidden px-4 py-6 space-y-6 max-w-xl mx-auto animate-view print-hidden">
@@ -341,7 +345,7 @@
         </div>
 
         <!-- REPORT VIEW (Where the PDF generates) -->
-        <div id="view-report" class="hidden max-w-3xl print:max-w-none print:w-full mx-auto p-4 animate-view print:p-0 pb-10 print:pb-0 print:bg-white print:h-auto print:overflow-visible print:block">
+        <div id="view-report" class="hidden max-w-2xl print:max-w-none print:w-full mx-auto p-4 animate-view print:p-0 pb-10 print:pb-0 print:bg-white print:h-auto print:overflow-visible print:block">
             <div class="flex items-center justify-between mb-6 print-hidden">
                 <button onclick="switchTab('dashboard')" class="w-12 h-12 bg-white rounded-[18px] flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 active:scale-90 transition">
                     <i class="fa-solid fa-arrow-left"></i>
@@ -361,7 +365,7 @@
                     <i class="fa-solid fa-circle-info text-4xl"></i>
                 </div>
                 <h2 class="text-2xl font-black text-slate-800 mb-2 tracking-tight">Water Audit App</h2>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 5.0</p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Version 6.0</p>
                 
                 <div class="space-y-4 text-left bg-slate-50 p-6 rounded-[24px] border border-slate-100 mb-8">
                     <div class="flex items-center gap-4">
