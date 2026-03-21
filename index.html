@@ -294,7 +294,7 @@
             <div class="space-y-4 pb-4">
                 <div class="relative group">
                     <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
-                    <input type="text" id="search-input" oninput="renderDashboard()" placeholder="Search Name or House No..." class="w-full pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-[24px] text-sm focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all font-medium">
+                    <input type="text" id="search-input" oninput="renderDashboard()" placeholder="Search Name, House No, or Volunteer..." class="w-full pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-[24px] text-sm focus:ring-4 focus:ring-blue-500/10 outline-none shadow-sm transition-all font-medium">
                 </div>
                 <div id="audit-list" class="space-y-3">
                     <!-- JS Populated Cards -->
@@ -514,6 +514,16 @@
         };
         window.closeCustomConfirm = () => document.getElementById('custom-confirm').classList.add('hidden');
 
+        window.filterByVolunteer = (name) => {
+            triggerHaptic();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = name;
+                renderDashboard();
+                searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        };
+
         const updateNetworkStatus = () => {
             const badge = document.getElementById('network-badge');
             const dot = document.getElementById('network-dot');
@@ -606,7 +616,11 @@
         function renderDashboard() {
             const searchInput = document.getElementById('search-input');
             const search = searchInput ? searchInput.value.toLowerCase() : '';
-            const filtered = surveys.filter(s => (s.headName || '').toLowerCase().includes(search) || (s.houseNo || '').toLowerCase().includes(search));
+            const filtered = surveys.filter(s => 
+                (s.headName || '').toLowerCase().includes(search) || 
+                (s.houseNo || '').toLowerCase().includes(search) ||
+                (s.volunteerName || '').toLowerCase().includes(search)
+            );
 
             const pdfBtn = document.getElementById('admin-export-pdf-btn');
             if (pdfBtn) {
@@ -706,10 +720,20 @@
             }
 
             const volunteerCounts = {};
+            const volunteerOriginalNames = {};
             surveys.forEach(s => {
-                const name = (s.volunteerName || 'Unknown').trim();
-                const stdName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-                volunteerCounts[stdName] = (volunteerCounts[stdName] || 0) + 1;
+                const rawName = (s.volunteerName || 'Unknown').trim();
+                // Normalize spaces and case for maximum grouping accuracy
+                const normalized = rawName.replace(/\s+/g, ' ').toLowerCase();
+                
+                volunteerCounts[normalized] = (volunteerCounts[normalized] || 0) + 1;
+                
+                // Store a properly capitalized version for display
+                if (!volunteerOriginalNames[normalized]) {
+                    volunteerOriginalNames[normalized] = normalized.split(' ')
+                        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                        .join(' ');
+                }
             });
 
             const totalActiveVolunteers = Object.keys(volunteerCounts).length;
@@ -717,7 +741,7 @@
             if (totalVolunteersEl) totalVolunteersEl.innerText = totalActiveVolunteers;
 
             const volunteerLeaderboard = Object.entries(volunteerCounts)
-                .map(([name, count]) => ({ name, count }))
+                .map(([normName, count]) => ({ name: volunteerOriginalNames[normName], count }))
                 .sort((a, b) => b.count - a.count)
                 .slice(0, 5);
 
@@ -733,8 +757,11 @@
                         else if (i === 1) { badgeClass = "bg-slate-100 text-slate-500 border-slate-200"; icon = `<i class="fa-solid fa-medal text-[10px]"></i>`; }
                         else if (i === 2) { badgeClass = "bg-orange-50 text-orange-600 border-orange-100"; icon = `<i class="fa-solid fa-medal text-[10px]"></i>`; }
 
+                        // Safely handle names with quotes (e.g. O'Connor)
+                        const safeName = v.name.replace(/'/g, "\\'");
+
                         return `
-                        <div class="flex items-center justify-between p-3 rounded-[20px] border border-slate-50 bg-slate-50/50 transition-all hover:bg-slate-100">
+                        <div onclick="filterByVolunteer('${safeName}')" class="flex items-center justify-between p-3 rounded-[20px] border border-slate-50 bg-slate-50/50 transition-all hover:bg-slate-100 cursor-pointer active:scale-[0.98]">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full ${badgeClass} border flex items-center justify-center shadow-sm shrink-0">
                                     ${icon}
