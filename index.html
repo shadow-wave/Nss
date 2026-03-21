@@ -290,8 +290,18 @@
                 </div>
             </div>
 
-            <!-- Admin Duplicates Container (New Feature) -->
-            <div id="admin-duplicates-container" class="hidden mb-6"></div>
+            <!-- Admin Duplicates Section -->
+            <div id="admin-duplicates-section" class="hidden bg-white rounded-[32px] p-6 border-2 border-rose-100 shadow-sm mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <i class="fa-solid fa-clone text-sm"></i> Suspected Duplicates
+                    </h3>
+                </div>
+                <p class="text-[10px] text-slate-500 font-medium mb-4 leading-relaxed">System detected multiple entries submitted by the same volunteer for the same household (matching Name & House ID). Please review and remove duplicates.</p>
+                <div id="admin-duplicates-list" class="space-y-3 max-h-[400px] overflow-y-auto no-scrollbar pb-2">
+                    <!-- JS Populated Duplicates -->
+                </div>
+            </div>
 
             <!-- Audit List Search -->
             <div class="space-y-4 pb-4">
@@ -608,7 +618,7 @@
                 if (pin === "6330") {
                     isAdmin = true;
                     document.getElementById('admin-btn-text').innerText = "Disable Admin Mode";
-                    window.showAlert("Admin mode enabled. You can now edit, delete records, and Batch Print.", "Admin Mode", "success");
+                    window.showAlert("Admin mode enabled. You can now edit, delete records, view duplicates, and Batch Print.", "Admin Mode", "success");
                     renderDashboard();
                 } else if (pin !== null) {
                     window.showAlert("Incorrect PIN.", "Access Denied", "error");
@@ -780,76 +790,6 @@
                 }
             }
 
-            // --- ADMIN DUPLICATE DETECTOR LOGIC ---
-            const duplicateContainer = document.getElementById('admin-duplicates-container');
-            if (duplicateContainer) {
-                if (isAdmin) {
-                    const entryMap = {};
-                    surveys.forEach(s => {
-                        // Grouping surveys submitted by the exact same volunteer, for the exact same Ward & House No.
-                        const volName = (s.volunteerName || '').trim().toLowerCase();
-                        const house = (s.houseNo || '').trim().toLowerCase();
-                        const ward = (s.wardNo || '').toString().trim();
-                        
-                        if(!volName || !house) return; 
-                        
-                        const key = `${volName}_${ward}_${house}`;
-                        if(!entryMap[key]) entryMap[key] = { vol: s.volunteerName, ward: s.wardNo, house: s.houseNo, records: [] };
-                        entryMap[key].records.push(s);
-                    });
-
-                    const duplicateGroups = Object.values(entryMap).filter(g => g.records.length > 1);
-
-                    if (duplicateGroups.length > 0) {
-                        duplicateContainer.classList.remove('hidden');
-                        duplicateContainer.innerHTML = `
-                            <div class="bg-rose-50 rounded-[32px] p-6 border border-rose-200 shadow-sm animate-view">
-                                <h3 class="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                                    <i class="fa-solid fa-clone text-sm"></i> Duplicates by Same Volunteer
-                                </h3>
-                                <div class="space-y-3">
-                                    ${duplicateGroups.map(g => `
-                                        <div class="bg-white p-4 rounded-[20px] border border-rose-100 shadow-sm">
-                                            <div class="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <p class="text-xs font-extrabold text-slate-800">${g.vol}</p>
-                                                    <p class="text-[10px] font-bold text-rose-500 uppercase tracking-wider mt-0.5">Ward ${g.ward} • House ID: ${g.house}</p>
-                                                </div>
-                                                <span class="bg-rose-100 text-rose-700 text-[9px] font-black px-2.5 py-1 rounded-full border border-rose-200">${g.records.length} Entries</span>
-                                            </div>
-                                            <div class="flex flex-col gap-2">
-                                                ${g.records.map((r) => `
-                                                    <div class="flex items-center justify-between bg-slate-50 border border-slate-100 p-2 rounded-[14px] cursor-pointer hover:bg-slate-100 active:scale-[0.98] transition-all" onclick="showAuditDetail('${r.id}')">
-                                                        <div class="flex-grow min-w-0 px-2">
-                                                            <p class="text-[11px] font-bold text-slate-700 truncate">${r.headName || 'No Name'}</p>
-                                                            <p class="text-[8px] text-slate-400 uppercase tracking-widest mt-0.5">Record ID: ${r.id.slice(-6)}</p>
-                                                        </div>
-                                                        <div class="flex items-center gap-1.5 shrink-0 pl-2 border-l border-slate-200">
-                                                            <button onclick="event.stopPropagation(); editSurveyFn('${r.id}')" class="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 hover:bg-blue-100 transition shadow-sm">
-                                                                <i class="fa-solid fa-pen text-[9px]"></i>
-                                                            </button>
-                                                            <button onclick="event.stopPropagation(); deleteSurveyFn('${r.id}')" class="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 hover:bg-rose-100 transition shadow-sm">
-                                                                <i class="fa-solid fa-trash text-[9px]"></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        duplicateContainer.classList.add('hidden');
-                        duplicateContainer.innerHTML = '';
-                    }
-                } else {
-                    duplicateContainer.classList.add('hidden');
-                    duplicateContainer.innerHTML = '';
-                }
-            }
-
             const listEl = document.getElementById('audit-list');
             if(listEl) {
                 listEl.innerHTML = filtered.map(s => `
@@ -877,6 +817,66 @@
                         `}
                     </div>
                 `).join('');
+            }
+
+            // ADDED: Duplicate Survey Detection Logic (Admin Only)
+            const duplicatesSection = document.getElementById('admin-duplicates-section');
+            const duplicatesList = document.getElementById('admin-duplicates-list');
+            
+            if (isAdmin && duplicatesSection && duplicatesList) {
+                const grouped = {};
+                surveys.forEach(s => {
+                    const vName = (s.volunteerName || '').trim().toLowerCase();
+                    const hName = (s.headName || '').trim().toLowerCase();
+                    const hNo = (s.houseNo || '').trim().toLowerCase();
+                    const key = `${vName}|${hName}|${hNo}`;
+                    
+                    if(!grouped[key]) grouped[key] = [];
+                    grouped[key].push(s);
+                });
+
+                const duplicateGroups = Object.values(grouped).filter(group => group.length > 1);
+                
+                if (duplicateGroups.length > 0) {
+                    duplicatesSection.classList.remove('hidden');
+                    let dupHTML = '';
+                    duplicateGroups.forEach(group => {
+                        const sRef = group[0];
+                        dupHTML += `
+                            <div class="bg-rose-50/50 p-4 rounded-[20px] border border-rose-100">
+                                <div class="flex items-center justify-between mb-2 border-b border-rose-100/50 pb-2">
+                                    <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest bg-rose-100 px-2.5 py-1 rounded-full flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> ${group.length} Copies</span>
+                                    <span class="text-[9px] font-extrabold text-slate-500 uppercase">Vol: ${sRef.volunteerName}</span>
+                                </div>
+                                <h5 class="font-black text-[12px] text-slate-800 mb-0.5">${sRef.headName}</h5>
+                                <p class="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-3">House ID: ${sRef.houseNo}</p>
+                                <div class="space-y-2">
+                                    ${group.map((dup, idx) => {
+                                        const d = dup.createdAt ? new Date(dup.createdAt.toMillis()).toLocaleString() : 'Pending Sync...';
+                                        return `
+                                        <div class="flex items-center justify-between bg-white p-2.5 rounded-[14px] border border-slate-100 shadow-sm">
+                                            <div>
+                                                <span class="text-[10px] font-extrabold text-slate-700 block">Record ${idx + 1}</span>
+                                                <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">${d}</span>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <button onclick="showAuditDetail('${dup.id}')" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:bg-slate-200 flex items-center justify-center transition border border-slate-100"><i class="fa-solid fa-eye text-[10px]"></i></button>
+                                                <button onclick="deleteSurveyFn('${dup.id}')" class="w-8 h-8 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-200 flex items-center justify-center transition border border-rose-100"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                                            </div>
+                                        </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    duplicatesList.innerHTML = dupHTML;
+                } else {
+                    duplicatesSection.classList.add('hidden');
+                    duplicatesList.innerHTML = '';
+                }
+            } else if (duplicatesSection) {
+                duplicatesSection.classList.add('hidden');
             }
         }
 
