@@ -277,9 +277,14 @@
 
             <!-- Volunteer Leaderboard -->
             <div class="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm">
-                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-medal text-amber-500 text-sm"></i> Top Volunteers
-                </h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <i class="fa-solid fa-medal text-amber-500 text-sm"></i> Top Volunteers
+                    </h3>
+                    <div class="bg-amber-50 text-amber-600 border border-amber-100 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+                        <span id="total-volunteers-count">0</span> Active
+                    </div>
+                </div>
                 <div id="volunteer-leaderboard" class="space-y-3">
                     <!-- JS Populated Leaderboard -->
                 </div>
@@ -706,6 +711,10 @@
                 const stdName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
                 volunteerCounts[stdName] = (volunteerCounts[stdName] || 0) + 1;
             });
+
+            const totalActiveVolunteers = Object.keys(volunteerCounts).length;
+            const totalVolunteersEl = document.getElementById('total-volunteers-count');
+            if (totalVolunteersEl) totalVolunteersEl.innerText = totalActiveVolunteers;
 
             const volunteerLeaderboard = Object.entries(volunteerCounts)
                 .map(([name, count]) => ({ name, count }))
@@ -1186,12 +1195,15 @@
 
             let goodHabits = 0;
             let awareness = 0;
+            const uniqueVols = new Set();
             surveys.forEach(s => {
                 if(s.q20 === 'Yes') goodHabits++;
                 if(s.q19 === 'Yes') awareness++;
+                if(s.volunteerName) uniqueVols.add(s.volunteerName.trim().toLowerCase());
             });
             const rwhPercent = Math.round((goodHabits / surveys.length) * 100);
             const awrPercent = Math.round((awareness / surveys.length) * 100);
+            const volCount = uniqueVols.size;
 
             const text = `
 🌊 *MG COLLEGE NSS: WATER AUDIT REPORT* 🌊
@@ -1199,6 +1211,7 @@
 📊 *Core Metrics:*
 🏡 Total Households Audited: *${surveys.length}*
 👥 Total Citizens Reached: *${members}*
+🙋 Active Volunteers: *${volCount}*
 🤝 Pledges to Conserve Water: *${pledges}*
 
 💧 *Water Consumption:*
