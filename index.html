@@ -275,6 +275,16 @@
                 </div>
             </div>
 
+            <!-- Volunteer Leaderboard -->
+            <div class="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-medal text-amber-500 text-sm"></i> Top Volunteers
+                </h3>
+                <div id="volunteer-leaderboard" class="space-y-3">
+                    <!-- JS Populated Leaderboard -->
+                </div>
+            </div>
+
             <!-- Audit List Search -->
             <div class="space-y-4 pb-4">
                 <div class="relative group">
@@ -688,6 +698,47 @@
                         </div>
                     </div>
                 `).join('');
+            }
+
+            const volunteerCounts = {};
+            surveys.forEach(s => {
+                const name = (s.volunteerName || 'Unknown').trim();
+                const stdName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                volunteerCounts[stdName] = (volunteerCounts[stdName] || 0) + 1;
+            });
+
+            const volunteerLeaderboard = Object.entries(volunteerCounts)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            const leaderboardEl = document.getElementById('volunteer-leaderboard');
+            if (leaderboardEl) {
+                if (volunteerLeaderboard.length === 0) {
+                    leaderboardEl.innerHTML = '<p class="text-xs text-slate-400 font-bold text-center py-4">No audits yet</p>';
+                } else {
+                    leaderboardEl.innerHTML = volunteerLeaderboard.map((v, i) => {
+                        let badgeClass = "bg-slate-50 text-slate-400 border-slate-100";
+                        let icon = `<span class="font-black text-[10px]">${i + 1}</span>`;
+                        if (i === 0) { badgeClass = "bg-amber-50 text-amber-500 border-amber-100"; icon = `<i class="fa-solid fa-crown text-[10px]"></i>`; }
+                        else if (i === 1) { badgeClass = "bg-slate-100 text-slate-500 border-slate-200"; icon = `<i class="fa-solid fa-medal text-[10px]"></i>`; }
+                        else if (i === 2) { badgeClass = "bg-orange-50 text-orange-600 border-orange-100"; icon = `<i class="fa-solid fa-medal text-[10px]"></i>`; }
+
+                        return `
+                        <div class="flex items-center justify-between p-3 rounded-[20px] border border-slate-50 bg-slate-50/50 transition-all hover:bg-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full ${badgeClass} border flex items-center justify-center shadow-sm shrink-0">
+                                    ${icon}
+                                </div>
+                                <p class="text-[13px] font-extrabold text-slate-700 truncate max-w-[150px] sm:max-w-[200px]">${v.name}</p>
+                            </div>
+                            <div class="bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+                                <p class="text-[10px] font-black text-blue-600">${v.count} Audits</p>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
             }
 
             const listEl = document.getElementById('audit-list');
@@ -1287,4 +1338,4 @@ _Generated via MG College NSS Water Audit System_`.trim();
 
     </script>
 </body>
-    </html>
+</html>
